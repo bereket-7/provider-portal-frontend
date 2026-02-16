@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  # ============================================
+  # Next.js Development Service
+  # ============================================
+  nextjs-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: nextjs-app:dev
+    container_name: nextjs-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./messages:/app/messages
+      - ./next.config.ts:/app/next.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./package.json:/app/package.json
+      - ./yarn.lock:/app/yarn.lock
+      # Preserve node_modules
+      - node_modules:/app/node_modules
+      # Preserve Next.js cache
+      - next_cache:/app/.next
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+    networks:
+      - dev-network
+    command: yarn dev
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  dev-network:
+    driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  node_modules:
+  next_cache:
