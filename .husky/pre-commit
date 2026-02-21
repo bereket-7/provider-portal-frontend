@@ -1,6 +1,4 @@
 #!/usr/bin/env sh
-. "$(dirname "$0")/common.sh"
-
 
 yarn run check-types || {
   echo "TypeScript type check failed. Please resolve the type errors reported. Fix the issues, update your changes, and retry the commit."

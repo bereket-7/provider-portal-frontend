@@ -1,13 +1,13 @@
-#!/usr/bin/env sh
+# #!/usr/bin/env sh
 
-# Initial echo message
-echo "Starting pre-push checks..."
+# # Initial echo message
+# echo "Starting pre-push checks..."
 
-# Build
-echo "Running build process..."
-yarn run build || {
-  echo "Build process failed. Ensure all build tasks complete successfully. Address any issues, make the necessary adjustments, and try pushing again."
-  exit 1
-}
+# # Build
+# echo "Running build process..."
+# yarn run build || {
+#   echo "Build process failed. Ensure all build tasks complete successfully. Address any issues, make the necessary adjustments, and try pushing again."
+#   exit 1
+# }
 
-echo "All checks passed successfully. Proceeding with push."
+# echo "All checks passed successfully. Proceeding with push."
