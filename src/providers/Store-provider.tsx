@@ -14,7 +14,9 @@ export default function StoreProvider({
 	children: React.ReactNode;
 }) {
 	const storeRef = useRef<AppStore | undefined>(undefined);
-	const persistorRef = useRef<any>(undefined);
+	const persistorRef = useRef<ReturnType<typeof persistStore> | undefined>(
+		undefined
+	);
 
 	if (!storeRef.current) {
 		storeRef.current = makeStore();
@@ -24,9 +26,12 @@ export default function StoreProvider({
 	return (
 		<Provider store={storeRef.current}>
 			{/* Wrap the app with PersistGate to delay rendering until persisted state is rehydrated */}
-			<PersistGate loading={null} persistor={persistorRef.current}>
-				{children}
-			</PersistGate>
+			{persistorRef.current && (
+				<PersistGate loading={null} persistor={persistorRef.current}>
+					{children}
+				</PersistGate>
+			)}
+			{!persistorRef.current && children}
 		</Provider>
 	);
 }

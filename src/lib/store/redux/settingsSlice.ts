@@ -1,4 +1,5 @@
-import { type PayloadAction, createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 
 export type FontSize = "small" | "medium" | "large";
 export type ThemeMode = "light" | "dark" | "system";
@@ -21,6 +22,7 @@ const getInitialState = (): SettingsState => {
 					fontFamily: parsed.fontFamily || "geist",
 				};
 			} catch (e) {
+				// eslint-disable-next-line no-console
 				console.error("Failed to parse settings from localStorage", e);
 			}
 		}

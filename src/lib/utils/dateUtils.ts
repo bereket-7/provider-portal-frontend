@@ -78,6 +78,7 @@ export function convertToISO(dateString: string): string {
 
 		return `${yyyy}-${mm}-${dd}`;
 	} catch (error) {
+		// eslint-disable-next-line no-console
 		console.error("Error converting date:", error);
 		return "";
 	}

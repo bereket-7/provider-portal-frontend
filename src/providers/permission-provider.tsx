@@ -9,7 +9,7 @@ interface PermissionContextType {
 	checkAccess: (
 		resourceType: string,
 		action: string,
-		resource?: any
+		resource?: unknown
 	) => boolean;
 	hasComponentAccess: (componentName: string) => boolean;
 	hasApiAccess: (endpoint: string, method: string) => boolean;
@@ -25,7 +25,7 @@ export function PermissionProvider({
 	children: React.ReactNode;
 }) {
 	const { checkAccess } = useABAC();
-	const user = useAppSelector((state) => state.currentUser.currentUser.user);
+	const _user = useAppSelector((state) => state.currentUser.currentUser.user);
 
 	const hasComponentAccess = (componentName: string) => {
 		return checkAccess("component", "view", { name: componentName });

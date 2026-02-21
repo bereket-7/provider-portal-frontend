@@ -22,6 +22,7 @@ export function checkRequiredEnvVars() {
 				)}\n\nPlease create a .env file in the root directory with these variables.`
 		);
 
+		// eslint-disable-next-line no-console
 		console.warn(`
 ╔════════════════════════════════════════════════════════════════╗
 ║                    Missing Environment Variables               ║

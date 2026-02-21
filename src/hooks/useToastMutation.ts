@@ -12,11 +12,8 @@ type MutationFunctionType<TParams> = (
 ) => Promise<APIResponseType>;
 
 type UseToastMutationOptions<TParams> = {
-	// eslint-disable-next-line no-unused-vars
 	onSuccess?: (data: APIResponseType, variables: TParams) => void;
-
-	// eslint-disable-next-line no-unused-vars
-	onError?: (error: any) => void;
+	onError?: (error: Error | APIResponseType | unknown) => void;
 };
 
 export default function useToastMutation<TParams>(
@@ -41,16 +38,18 @@ export default function useToastMutation<TParams>(
 			toast.success(data.message);
 			options?.onSuccess?.(data, variables); // Call provided onSuccess if exists
 		},
-		onError: (error: any) => {
+		onError: (error: Error | APIResponseType | any) => {
 			toast.dismiss();
 
-			const errorData = error?.message;
+			const errorData = (error as any)?.message;
+			// eslint-disable-next-line no-console
 			console.log("new Error", errorData);
 
 			if (errorData && typeof errorData === "object") {
 				Object.entries(errorData).forEach(([field, messages]) => {
 					if (Array.isArray(messages)) {
 						messages.forEach((message) => {
+							// eslint-disable-next-line no-console
 							console.log("message error ", `${field}: ${message}`);
 							toast.error(`${field}: ${message}`);
 						});

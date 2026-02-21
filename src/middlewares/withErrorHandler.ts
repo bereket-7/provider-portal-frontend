@@ -8,6 +8,7 @@ export const withErrorHandler: MiddlewareFactory = (next) => {
 			await next(request, _next);
 		} catch (error) {
 			if (error instanceof Error) {
+				// eslint-disable-next-line no-console
 				console.log("withErrorHandler", error.message);
 			}
 		}

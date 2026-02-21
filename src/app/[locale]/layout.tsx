@@ -1,10 +1,12 @@
 import { Geist, Poppins } from "next/font/google";
 import { notFound } from "next/navigation";
+import React from "react";
 
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { Toaster } from "sonner";
 
+import { LayoutContent } from "@/components/ui/custom/layout-content";
 import { routing } from "@/i18n/routing";
 import StoreProvider from "@/providers/Store-provider";
 import { AnalyticsProvider } from "@/providers/analytics-provider";
@@ -12,6 +14,7 @@ import { EnvCheckerProvider } from "@/providers/env-checker-provider";
 import { NetworkProvider } from "@/providers/network-provider";
 import QueryProviders from "@/providers/query-provider";
 import { SettingsProvider } from "@/providers/settings-provider";
+import { UserRoleProvider } from "@/providers/user-role-provider";
 
 const geistSans = Geist({
 	variable: "--font-geist",
@@ -56,8 +59,10 @@ export default async function LocaleLayout({
 								<SettingsProvider>
 									<AnalyticsProvider>
 										<NextIntlClientProvider messages={messages}>
-											{children}
-											<Toaster position="bottom-right" />
+											<UserRoleProvider>
+												<LayoutContent>{children}</LayoutContent>
+												<Toaster position="bottom-right" />
+											</UserRoleProvider>
 										</NextIntlClientProvider>
 									</AnalyticsProvider>
 								</SettingsProvider>

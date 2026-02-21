@@ -33,7 +33,7 @@ class Logger {
 	private formatMessage(
 		level: LogLevel,
 		message: string,
-		...args: any[]
+		...args: unknown[]
 	): string {
 		const timestamp = new Date().toISOString();
 		const formattedArgs = args
@@ -62,41 +62,46 @@ class Logger {
 
 			localStorage.setItem(key, JSON.stringify(logs));
 		} catch (error) {
+			// eslint-disable-next-line no-console
 			console.error("Failed to store log:", error);
 		}
 	}
 
-	debug(message: string, ...args: any[]) {
+	debug(message: string, ...args: unknown[]) {
 		if (!this.shouldLog("debug")) return;
 		const logEntry = this.formatMessage("debug", message, ...args);
 		if (this.options.enableConsole) {
+			// eslint-disable-next-line no-console
 			console.debug(logEntry);
 		}
 		this.store(logEntry);
 	}
 
-	info(message: string, ...args: any[]) {
+	info(message: string, ...args: unknown[]) {
 		if (!this.shouldLog("info")) return;
 		const logEntry = this.formatMessage("info", message, ...args);
 		if (this.options.enableConsole) {
+			// eslint-disable-next-line no-console
 			console.info(logEntry);
 		}
 		this.store(logEntry);
 	}
 
-	warn(message: string, ...args: any[]) {
+	warn(message: string, ...args: unknown[]) {
 		if (!this.shouldLog("warn")) return;
 		const logEntry = this.formatMessage("warn", message, ...args);
 		if (this.options.enableConsole) {
+			// eslint-disable-next-line no-console
 			console.warn(logEntry);
 		}
 		this.store(logEntry);
 	}
 
-	error(message: string, ...args: any[]) {
+	error(message: string, ...args: unknown[]) {
 		if (!this.shouldLog("error")) return;
 		const logEntry = this.formatMessage("error", message, ...args);
 		if (this.options.enableConsole) {
+			// eslint-disable-next-line no-console
 			console.error(logEntry);
 		}
 		this.store(logEntry);
@@ -115,6 +120,7 @@ class Logger {
 		try {
 			localStorage.removeItem("application_logs");
 		} catch (error) {
+			// eslint-disable-next-line no-console
 			console.error("Failed to clear logs:", error);
 		}
 	}

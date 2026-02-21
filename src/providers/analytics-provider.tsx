@@ -11,7 +11,7 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
 
 	useEffect(() => {
 		// Custom analytics tracking logic
-		const url = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
+		const _url = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
 		// Track page view
 	}, [pathname, searchParams]);
 
