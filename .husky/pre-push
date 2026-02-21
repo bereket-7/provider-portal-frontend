@@ -1,6 +1,4 @@
 #!/usr/bin/env sh
-. "$(dirname "$0")/common.sh"
-
 
 # Initial echo message
 echo "Starting pre-push checks..."
