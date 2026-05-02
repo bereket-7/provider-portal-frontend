@@ -12,15 +12,135 @@ import {
 	Save,
 	Send,
 	User,
+	Plus,
+	X,
+	AlertCircle,
 } from "lucide-react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
+import { createComprehensiveClaim } from "@/_service/actions/claim-actions";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+const claimSchema = z.object({
+	patientName: z.string().min(1, "Patient name is required"),
+	memberId: z.string().min(1, "Member ID is required"),
+	dob: z.string().min(1, "Date of birth is required"),
+	subscriberId: z.string().min(1, "Subscriber ID/Policy number is required"),
+	payerId: z.string().min(1, "Payer is required"),
+	serviceFrom: z.string().min(1, "Start date is required"),
+	serviceTo: z.string().min(1, "End date is required"),
+	billingNpi: z.string().min(10, "NPI must be 10 digits").max(10),
+	lines: z
+		.array(
+			z.object({
+				lineNumber: z.number(),
+				serviceDate: z.string().min(1, "Required"),
+				cptCode: z.string().min(1, "Required"),
+				units: z.string().min(1, "Required"),
+				billedAmount: z.string().min(1, "Required"),
+			})
+		)
+		.min(1, "At least one service line is required"),
+	diagnoses: z
+		.array(
+			z.object({
+				position: z.number(),
+				code: z.string().min(1, "Required"),
+				codeType: z.enum(["ICD10", "ICD9"]),
+			})
+		)
+		.min(1, "At least one diagnosis is required"),
+});
+
+type ClaimFormValues = z.infer<typeof claimSchema>;
 
 export function NewClaimView() {
 	const [step, setStep] = useState(1);
+	const router = useRouter();
+
+	const form = useForm<ClaimFormValues>({
+		resolver: zodResolver(claimSchema),
+		defaultValues: {
+			patientName: "",
+			memberId: "",
+			dob: "",
+			subscriberId: "",
+			payerId: "",
+			serviceFrom: new Date().toISOString().split("T")[0],
+			serviceTo: new Date().toISOString().split("T")[0],
+			billingNpi: "",
+			lines: [{ lineNumber: 1, serviceDate: "", cptCode: "", units: "1", billedAmount: "" }],
+			diagnoses: [{ position: 1, code: "", codeType: "ICD10" }],
+		},
+	});
+
+	const {
+		fields: lineFields,
+		append: appendLine,
+		remove: removeLine,
+	} = useFieldArray({
+		control: form.control,
+		name: "lines",
+	});
+
+	const {
+		fields: diagFields,
+		append: appendDiag,
+		remove: removeDiag,
+	} = useFieldArray({
+		control: form.control,
+		name: "diagnoses",
+	});
+
+	const onSubmit = async (values: ClaimFormValues) => {
+		const loadingId = toast.loading("Creating comprehensive claim...");
+		try {
+			const input = {
+				claimData: {
+					serviceFrom: values.serviceFrom,
+					serviceTo: values.serviceTo,
+					billingNpi: values.billingNpi,
+					status: "PENDING",
+					type: "PROFESSIONAL",
+				},
+				providerId: "PRV-001", // Should come from context
+				patientId: values.memberId, // Simplified for now
+				subscriberId: values.subscriberId,
+				payerId: values.payerId,
+				claimLines: values.lines.map((l) => ({
+					lineData: {
+						lineNumber: l.lineNumber,
+						serviceDate: l.serviceDate,
+						cptCode: l.cptCode,
+						units: l.units,
+						billedAmount: l.billedAmount,
+					},
+				})),
+				diagnoses: values.diagnoses.map((d) => ({
+					position: d.position,
+					code: d.code,
+					codeType: d.codeType,
+				})),
+			};
+
+			const response = await createComprehensiveClaim(input);
+			if (response.ok) {
+				toast.success("Claim created successfully", { id: loadingId });
+				router.push("/claims");
+			} else {
+				toast.error(response.message || "Failed to create claim", { id: loadingId });
+			}
+		} catch (error) {
+			toast.error("An unexpected error occurred", { id: loadingId });
+		}
+	};
 
 	const steps = [
 		{ id: 1, title: "Patient Info", icon: User },
@@ -123,20 +243,32 @@ export function NewClaimView() {
 										Patient Full Name
 									</label>
 									<input
+										{...form.register("patientName")}
 										type="text"
 										placeholder="e.g. John Doe"
-										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
 									/>
+									{form.formState.errors.patientName && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
+											{form.formState.errors.patientName.message}
+										</p>
+									)}
 								</div>
 								<div className="space-y-2">
 									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-										Member ID
+										Member ID (Patient ID)
 									</label>
 									<input
+										{...form.register("memberId")}
 										type="text"
-										placeholder="e.gV-12345678"
-										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+										placeholder="e.g. PAT-12345"
+										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
 									/>
+									{form.formState.errors.memberId && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
+											{form.formState.errors.memberId.message}
+										</p>
+									)}
 								</div>
 								<div className="space-y-2">
 									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -145,41 +277,310 @@ export function NewClaimView() {
 									<div className="relative">
 										<Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
 										<input
+											{...form.register("dob")}
 											type="date"
-											className="w-full pl-11 pr-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+											className="w-full pl-11 pr-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
 										/>
 									</div>
+									{form.formState.errors.dob && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
+											{form.formState.errors.dob.message}
+										</p>
+									)}
 								</div>
 								<div className="space-y-2">
 									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-										Policy Number
+										Policy Number (Subscriber ID)
 									</label>
 									<input
+										{...form.register("subscriberId")}
 										type="text"
-										placeholder="e.g. POL-998877"
-										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+										placeholder="e.g. SUB-998877"
+										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
 									/>
+									{form.formState.errors.subscriberId && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
+											{form.formState.errors.subscriberId.message}
+										</p>
+									)}
 								</div>
 							</div>
 						)}
 
-						{step > 1 && (
-							<div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-								<div className="p-4 bg-primary/5 rounded-full">
-									<FilePlus className="w-12 h-12 text-primary opacity-20" />
+						{step === 2 && (
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
+								<div className="space-y-2">
+									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+										Payer (Insurance Company)
+									</label>
+									<select
+										{...form.register("payerId")}
+										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold appearance-none"
+									>
+										<option value="">Select Payer</option>
+										<option value="PAYER-001">BlueCross BlueShield</option>
+										<option value="PAYER-002">Aetna Healthcare</option>
+										<option value="PAYER-003">UnitedHealth Group</option>
+									</select>
+									{form.formState.errors.payerId && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
+											{form.formState.errors.payerId.message}
+										</p>
+									)}
 								</div>
-								<div className="max-w-xs">
-									<h3 className="text-lg font-bold">Standard Form Interface</h3>
-									<p className="text-sm text-muted-foreground">
-										This section will contain the standardized form fields for{" "}
-										{steps.find((s) => s.id === step)?.title.toLowerCase()}.
-									</p>
+								<div className="space-y-2">
+									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+										Billing Provider NPI
+									</label>
+									<input
+										{...form.register("billingNpi")}
+										type="text"
+										placeholder="e.g. 1928374650"
+										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
+									/>
+									{form.formState.errors.billingNpi && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
+											{form.formState.errors.billingNpi.message}
+										</p>
+									)}
+								</div>
+								<div className="space-y-2">
+									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+										Service From Date
+									</label>
+									<input
+										{...form.register("serviceFrom")}
+										type="date"
+										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
+									/>
+									{form.formState.errors.serviceFrom && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
+											{form.formState.errors.serviceFrom.message}
+										</p>
+									)}
+								</div>
+								<div className="space-y-2">
+									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+										Service To Date
+									</label>
+									<input
+										{...form.register("serviceTo")}
+										type="date"
+										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
+									/>
+									{form.formState.errors.serviceTo && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
+											{form.formState.errors.serviceTo.message}
+										</p>
+									)}
+								</div>
+							</div>
+						)}
+
+						{step === 3 && (
+							<div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+								{/* Service Lines Section */}
+								<div className="space-y-4">
+									<div className="flex justify-between items-center group/section">
+										<h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/80">
+											Service Lines
+										</h4>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												appendLine({
+													lineNumber: lineFields.length + 1,
+													serviceDate: "",
+													cptCode: "",
+													units: "1",
+													billedAmount: "",
+												})
+											}
+											className="h-8 rounded-lg border-primary/20 text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all shadow-sm"
+										>
+											<Plus className="w-3 h-3 mr-1.5" />
+											Add Line
+										</Button>
+									</div>
+									<div className="space-y-4">
+										{lineFields.map((field, index) => (
+											<div
+												key={field.id}
+												className="p-6 rounded-2xl border border-border/40 bg-primary/[0.02] relative group/item hover:border-primary/20 transition-colors"
+											>
+												<div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+													<div className="space-y-2">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															Line #
+														</label>
+														<input
+															{...form.register(`lines.${index}.lineNumber` as const, {
+																valueAsNumber: true,
+															})}
+															className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-black text-primary"
+															disabled
+														/>
+													</div>
+													<div className="space-y-2 col-span-2 md:col-span-1">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															Service Date
+														</label>
+														<input
+															{...form.register(`lines.${index}.serviceDate` as const)}
+															type="date"
+															className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-bold"
+														/>
+													</div>
+													<div className="space-y-2">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															CPT Code
+														</label>
+														<input
+															{...form.register(`lines.${index}.cptCode` as const)}
+															placeholder="e.g. 99213"
+															className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-bold"
+														/>
+													</div>
+													<div className="space-y-2">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															Units
+														</label>
+														<input
+															{...form.register(`lines.${index}.units` as const)}
+															type="number"
+															className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-bold"
+														/>
+													</div>
+													<div className="space-y-2">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															Billed Amount
+														</label>
+														<div className="relative">
+															<span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">
+																$
+															</span>
+															<input
+																{...form.register(`lines.${index}.billedAmount` as const)}
+																placeholder="0.00"
+																className="w-full pl-6 pr-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-black tabular-nums"
+															/>
+														</div>
+													</div>
+												</div>
+												{index > 0 && (
+													<button
+														type="button"
+														onClick={() => removeLine(index)}
+														className="absolute -top-2 -right-2 p-1.5 bg-background border border-border/40 rounded-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm opacity-0 group-hover/item:opacity-100"
+													>
+														<X className="w-3 h-3" />
+													</button>
+												)}
+											</div>
+										))}
+									</div>
+									{form.formState.errors.lines && (
+										<p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">
+											{form.formState.errors.lines.message}
+										</p>
+									)}
+								</div>
+
+								{/* Diagnoses Section */}
+								<div className="space-y-4 pt-4 border-t border-border/40">
+									<div className="flex justify-between items-center group/section">
+										<h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary/80">
+											Diagnoses (ICD-10)
+										</h4>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												appendDiag({
+													position: diagFields.length + 1,
+													code: "",
+													codeType: "ICD10",
+												})
+											}
+											className="h-8 rounded-lg border-primary/20 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+										>
+											<Plus className="w-3 h-3 mr-1.5" />
+											Add Diagnosis
+										</Button>
+									</div>
+									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+										{diagFields.map((field, index) => (
+											<div
+												key={field.id}
+												className="p-4 rounded-xl border border-border/40 bg-background relative group/item hover:border-emerald-500/20 transition-all"
+											>
+												<div className="flex items-center gap-3">
+													<div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center text-[10px] font-black text-emerald-600">
+														{index + 1}
+													</div>
+													<input
+														{...form.register(`diagnoses.${index}.code` as const)}
+														placeholder="ICD-10 Code"
+														className="flex-1 px-3 py-2 bg-primary/5 border border-transparent rounded-lg text-xs font-bold focus:bg-background focus:border-border/40 transition-all"
+													/>
+												</div>
+												{index > 0 && (
+													<button
+														type="button"
+														onClick={() => removeDiag(index)}
+														className="absolute top-1/2 -translate-y-1/2 -right-2 p-1.5 bg-background border border-border/40 rounded-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm opacity-0 group-hover/item:opacity-100"
+													>
+														<X className="w-3 h-3" />
+													</button>
+												)}
+											</div>
+										))}
+									</div>
+									{form.formState.errors.diagnoses && (
+										<p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">
+											{form.formState.errors.diagnoses.message}
+										</p>
+									)}
+								</div>
+							</div>
+						)}
+
+						{step === 4 && (
+							<div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+								<div className="p-8 rounded-2xl bg-primary/[0.02] border-2 border-dashed border-primary/20 flex flex-col items-center text-center space-y-4">
+									<div className="p-4 bg-emerald-500/10 rounded-full">
+										<CheckCircle className="w-12 h-12 text-emerald-500" />
+									</div>
+									<div>
+										<h3 className="text-xl font-black tracking-tight">Review & Create</h3>
+										<p className="text-sm text-muted-foreground font-medium max-w-sm mx-auto">
+											Verify all clinical and patient details before generating the comprehensive claim record.
+										</p>
+									</div>
+								</div>
+								
+								<div className="grid grid-cols-2 gap-4">
+									<div className="p-4 rounded-xl bg-card border border-border/40 flex flex-col">
+										<span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Total Charges</span>
+										<span className="text-lg font-black text-foreground tabular-nums">
+											$
+											{form.watch("lines").reduce((acc, curr) => acc + parseFloat(curr.billedAmount || "0"), 0).toFixed(2)}
+										</span>
+									</div>
+									<div className="p-4 rounded-xl bg-card border border-border/40 flex flex-col">
+										<span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Calculated Lines</span>
+										<span className="text-lg font-black text-foreground tabular-nums">{form.watch("lines").length} Units</span>
+									</div>
 								</div>
 							</div>
 						)}
 
 						<div className="pt-6 border-t border-border/40 flex justify-between">
 							<PremiumButton
+								type="button"
 								variant="ghost"
 								disabled={step === 1}
 								onClick={() => setStep(step - 1)}
@@ -188,14 +589,36 @@ export function NewClaimView() {
 								<ChevronRight className="w-4 h-4 mr-2 rotate-180" />
 								Back
 							</PremiumButton>
-							<PremiumButton
-								onClick={() => setStep(step < 4 ? step + 1 : step)}
-								icon={ChevronRight}
-								iconPosition="right"
-								className="w-48"
-							>
-								{step === 4 ? "Submit" : "Continue"}
-							</PremiumButton>
+							
+							{step < 4 ? (
+								<PremiumButton
+									type="button"
+									onClick={async () => {
+										// Optional: Validate current step fields before proceeding
+										const fieldsToValidate = 
+											step === 1 ? ["patientName", "memberId", "dob", "subscriberId"] :
+											step === 2 ? ["payerId", "billingNpi", "serviceFrom", "serviceTo"] :
+											["lines", "diagnoses"];
+										
+										const isValid = await form.trigger(fieldsToValidate as any);
+										if (isValid) setStep(step + 1);
+									}}
+									icon={ChevronRight}
+									iconPosition="right"
+									className="w-48"
+								>
+									Continue
+								</PremiumButton>
+							) : (
+								<PremiumButton
+									type="button"
+									onClick={form.handleSubmit(onSubmit as any)}
+									icon={Send}
+									className="w-48 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+								>
+									Create Claim
+								</PremiumButton>
+							)}
 						</div>
 					</CardContent>
 				</Card>

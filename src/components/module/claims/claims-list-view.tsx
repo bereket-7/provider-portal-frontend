@@ -17,55 +17,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
-
-type Claim = (typeof claims)[0];
-
-// Mock data for claims
-const claims = [
-	{
-		id: "CLM-001",
-		patient: "Sarah Johnson",
-		date: "Feb 15, 2026",
-		amount: "$1,200.00",
-		status: "Approved",
-		type: "Clinical",
-	},
-	{
-		id: "CLM-002",
-		patient: "Michael Chen",
-		date: "Feb 14, 2026",
-		amount: "$850.00",
-		status: "Pending",
-		type: "Diagnostic",
-	},
-	{
-		id: "CLM-003",
-		patient: "Emma Wilson",
-		date: "Feb 14, 2026",
-		amount: "$2,400.00",
-		status: "Denied",
-		type: "Surgical",
-	},
-	{
-		id: "CLM-004",
-		patient: "James Rodriguez",
-		date: "Feb 13, 2026",
-		amount: "$450.00",
-		status: "Approved",
-		type: "Consultation",
-	},
-	{
-		id: "CLM-005",
-		patient: "Olivia Taylor",
-		date: "Feb 12, 2026",
-		amount: "$1,100.00",
-		status: "Pending",
-		type: "Pharmacy",
-	},
-];
+import { useClaims } from "@/hooks/useClaims";
 
 export function ClaimsListView() {
 	const router = useRouter();
+	const { data: claims, isLoading } = useClaims();
+
+	if (isLoading) {
+		return (
+			<div className="flex items-center justify-center min-h-[400px]">
+				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+			</div>
+		);
+	}
+
 	return (
 		<div className="relative space-y-6 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			{/* Sleek Background Elements */}
@@ -175,53 +140,54 @@ export function ClaimsListView() {
 				<DataTable
 					title="Claims Ledger"
 					subtitle="Live processing registry • Professional & Institutional"
-					data={claims}
-					onRowClick={(claim: Claim) => router.push(`/claims/${claim.id}`)}
+					data={claims || []}
+					onRowClick={(claim: any) => router.push(`/claims/${claim.id}`)}
 					onExport={() => console.log("Exporting claims...")}
 					columns={[
 						{
 							header: "Claim ID",
-							key: "id",
+							key: "claimNumber",
 							className: "px-8 font-black text-primary text-xs py-5",
+							render: (claim: any) => claim.claimNumber || `CLM-${claim.id.substring(0, 4)}`,
 						},
 						{
 							header: "Patient Name",
 							key: "patient",
 							className: "px-8 font-bold text-sm",
+							render: (claim: any) => `${claim.patient?.firstName} ${claim.patient?.lastName}`,
 						},
 						{
-							header: "Type",
-							key: "type",
-							className: "px-8",
-							render: (claim: Claim) => (
-								<span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-									{claim.type}
-								</span>
-							),
+							header: "Payer",
+							key: "payer",
+							className: "px-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground",
+							render: (claim: any) => claim.payer?.name || "N/A",
 						},
 						{
-							header: "Date",
-							key: "date",
+							header: "DoS",
+							key: "serviceFrom",
 							className: "px-8 text-xs text-muted-foreground whitespace-nowrap",
 						},
 						{
 							header: "Amount",
-							key: "amount",
+							key: "totalCharges",
 							className: "px-8 font-black tabular-nums",
+							render: (claim: any) => `$${parseFloat(claim.totalCharges || "0").toFixed(2)}`,
 						},
 						{
 							header: "Status",
 							key: "status",
 							className: "px-8",
-							render: (claim: Claim) => (
+							render: (claim: any) => (
 								<Badge
 									variant="outline"
 									className={`text-[9px] font-black uppercase tracking-wider border-none ${
-										claim.status === "Approved"
+										claim.status === "APPROVED"
 											? "bg-emerald-500/10 text-emerald-500"
-											: claim.status === "Pending"
+											: claim.status === "PENDING"
 												? "bg-amber-500/10 text-amber-500"
-												: "bg-rose-500/10 text-rose-500"
+												: claim.status === "837_SUBMITTED"
+													? "bg-blue-500/10 text-blue-500"
+													: "bg-rose-500/10 text-rose-500"
 									}`}
 								>
 									{claim.status}
@@ -233,7 +199,7 @@ export function ClaimsListView() {
 							key: "action",
 							align: "right",
 							className: "px-8",
-							render: (claim: Claim) => (
+							render: (claim: any) => (
 								<Link href={`/claims/${claim.id}`}>
 									<button className="p-2 hover:bg-primary/5 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
 										<MoreHorizontal className="w-4 h-4 text-muted-foreground" />
