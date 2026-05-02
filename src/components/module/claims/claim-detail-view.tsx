@@ -50,6 +50,8 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 		PENDING: "bg-amber-500/10 text-amber-500",
 		DENIED: "bg-rose-500/10 text-rose-500",
 		"837_SUBMITTED": "bg-blue-500/10 text-blue-500",
+		"837_submitted": "bg-blue-500/10 text-blue-500",
+		"ready_for_837": "bg-indigo-500/10 text-indigo-500",
 	};
 
 	if (isLoading) {
@@ -102,6 +104,13 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 								>
 									{claim.status}
 								</Badge>
+								{claim.ediStatus && (
+									<Badge
+										className={`border-none text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${statusColors[claim.ediStatus] || "bg-muted text-muted-foreground"}`}
+									>
+										EDI: {claim.ediStatus}
+									</Badge>
+								)}
 							</div>
 							<div className="flex items-center gap-2.5 mt-1">
 								<p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">
@@ -118,7 +127,7 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 						<button className="p-2.5 rounded-xl border border-border/40 bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-all shadow-sm">
 							<Printer className="w-4 h-4" />
 						</button>
-						{claim.status !== "837_SUBMITTED" && (
+						{claim.status !== "837_SUBMITTED" && claim.ediStatus !== "837_submitted" && (
 							<PremiumButton 
 								onClick={handleSendToInsurance}
 								className="px-6 h-10 shadow-lg shadow-primary/10 text-[9px] uppercase font-black tracking-widest rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
