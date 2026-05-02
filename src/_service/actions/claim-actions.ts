@@ -80,7 +80,7 @@ export async function getClaims(search?: string, status?: string) {
 
 export async function getClaim(id: string) {
 	const query = `
-    query GetClaim($id: ID!) {
+    query GetClaim($id: String!) {
       claim(id: $id) {
         id
         claimNumber
@@ -125,7 +125,7 @@ export async function getClaim(id: string) {
 
 export async function submitClaimToInsurance(id: string) {
 	const mutation = `
-    mutation SubmitClaimToInsurance($claimId: ID!) {
+    mutation SubmitClaimToInsurance($claimId: String!) {
       submitClaimToInsurance(claimId: $claimId) {
         success
         message
