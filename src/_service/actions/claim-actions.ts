@@ -43,6 +43,19 @@ export async function getMembers(search?: string) {
 	return await graphqlRequest(query, { search });
 }
 
+export async function getPayers(search?: string) {
+	const query = `
+    query GetPayers($search: String) {
+      payers(search: $search) {
+        id
+        name
+        payerCode
+      }
+    }
+  `;
+	return await graphqlRequest(query, { search });
+}
+
 export async function getClaims(filter?: any) {
 	const query = `
     query GetClaims($filter: ClaimFilterInput) {

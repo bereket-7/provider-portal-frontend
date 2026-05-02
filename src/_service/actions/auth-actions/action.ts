@@ -11,7 +11,9 @@ const SESSION_NAME = "DMS-ADMIN";
 
 const secretKey = "secret";
 const key = new TextEncoder().encode(secretKey);
-const cookieAction = await cookies();
+
+// STABILITY FIX: Moved cookies() calls inside request-scoped functions
+// Antigravity unique fix marker: 2026-05-02-FIX-001
 
 export interface ICredentials {
 	email: string;
@@ -43,11 +45,13 @@ export async function decrypt(input: string): Promise<any> {
 }
 
 export async function get_session() {
-	const session = cookieAction.get(SESSION_NAME)?.value;
+	const cookieStore = await cookies();
+	const session = cookieStore.get(SESSION_NAME)?.value;
 	if (!session) return null;
 
 	return await decrypt(session);
 }
+
 export async function signUp(credentials: ICredentials) {
 	try {
 		const response = await axiosInstance.post("auth/signup/", credentials);
@@ -89,7 +93,8 @@ export async function signIn(credentials: ICredentials) {
 		}
 
 		// Set session cookie
-		cookieAction.set(SESSION_NAME, session, {
+		const cookieStore = await cookies();
+		cookieStore.set(SESSION_NAME, session, {
 			expires: new Date(expires),
 			httpOnly: true,
 			sameSite: "lax",
@@ -111,7 +116,8 @@ export async function signOut() {
 	try {
 		await axiosInstance.get("auth/logout/");
 
-		cookieAction.set(SESSION_NAME, "", { expires: new Date(0) });
+		const cookieStore = await cookies();
+		cookieStore.set(SESSION_NAME, "", { expires: new Date(0) });
 	} catch (error: any) {
 		throw getErrorMessage(error);
 	}

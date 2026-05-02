@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { usePatients } from "@/hooks/usePatients";
 import { useMembers } from "@/hooks/useMembers";
+import { usePayers } from "@/hooks/usePayers";
 import { SearchableSelect } from "@/components/ui/custom/searchable-select";
 
 const claimSchema = z.object({
@@ -69,9 +70,11 @@ export function NewClaimView() {
 	const router = useRouter();
 	const [patientSearch, setPatientSearch] = useState("");
 	const [memberSearch, setMemberSearch] = useState("");
+	const [payerSearch, setPayerSearch] = useState("");
 
 	const { data: patients } = usePatients(patientSearch);
 	const { data: members } = useMembers(memberSearch);
+	const { data: payers } = usePayers(payerSearch);
 
 	const form = useForm<ClaimFormValues>({
 		resolver: zodResolver(claimSchema),
@@ -322,18 +325,21 @@ export function NewClaimView() {
 									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
 										Payer (Insurance Company)
 									</label>
-									<select
-										{...form.register("payerId")}
-										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold appearance-none"
-									>
-										<option value="">Select Payer</option>
-										<option value="PAYER-001">BlueCross BlueShield</option>
-										<option value="PAYER-002">Aetna Healthcare</option>
-										<option value="PAYER-003">UnitedHealth Group</option>
-									</select>
+									<SearchableSelect
+										options={(payers || []).map((p: any) => ({
+											value: p.id,
+											label: `${p.name} (${p.payerCode})`,
+										}))}
+										value={form.watch("payerId")}
+										onSearchChange={setPayerSearch}
+										onSelect={(val) => {
+											form.setValue("payerId", val);
+										}}
+										placeholder="Search Ethiopian Insurances..."
+									/>
 									{form.formState.errors.payerId && (
 										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
-											{form.formState.errors.payerId.message}
+											Payer is required
 										</p>
 									)}
 								</div>

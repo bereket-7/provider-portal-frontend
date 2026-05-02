@@ -6,7 +6,7 @@ import { get_session } from "./auth-actions/action";
 axios.defaults.withCredentials = true;
 
 const axiosInstance: AxiosInstance = axios.create({
-	baseURL: process.env.DJANGO_API_BASE_URL, // Default baseURL for non-tenant requests
+	baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002", // Default to localhost:8002 if not set
 	timeout: 20000,
 	headers: {
 		"Content-Type": "application/json",
