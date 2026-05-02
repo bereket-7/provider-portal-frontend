@@ -284,8 +284,8 @@ export function NewClaimView() {
 									</label>
 									<SearchableSelect
 										options={(members || []).map((m: any) => ({
-											value: m.memberId,
-											label: `${m.firstName} ${m.lastName} (${m.memberId})`,
+											value: m.payerMemberId,
+											label: `${m.firstName} ${m.lastName} (${m.payerMemberId})`,
 										}))}
 										value={form.watch("subscriberId")}
 										onSearchChange={setMemberSearch}

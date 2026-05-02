@@ -36,7 +36,7 @@ export async function getMembers(search?: string) {
         id
         firstName
         lastName
-        memberId
+        payerMemberId
       }
     }
   `;
