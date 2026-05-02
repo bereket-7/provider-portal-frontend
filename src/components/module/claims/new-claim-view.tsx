@@ -138,8 +138,8 @@ export function NewClaimView() {
 					status: "DRAFT",
 					type: "PROFESSIONAL",
 				},
-				providerId: "PRV-001", // Should come from context
-				patientId: values.memberId, // Simplified for now
+				providerId: "e039cf14-05ef-4d49-b054-af407d4bd579", // Use the valid UUID for "Test Clinic" discovered in DB
+				patientId: values.memberId, // This is the Patient UUID
 				subscriberId: values.subscriberId,
 				payerId: values.payerId,
 				claimLines: values.lines.map((l) => ({
@@ -307,7 +307,7 @@ export function NewClaimView() {
 									</label>
 									<SearchableSelect
 										options={(members || []).map((m: any) => ({
-											value: m.payerMemberId,
+											value: m.id,
 											label: `${m.firstName} ${m.lastName} (${m.payerMemberId})`,
 										}))}
 										value={form.watch("subscriberId")}
