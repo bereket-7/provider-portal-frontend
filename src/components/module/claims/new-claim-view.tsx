@@ -71,6 +71,7 @@ type ClaimFormValues = z.infer<typeof claimSchema>;
 
 export function NewClaimView() {
 	const [step, setStep] = useState(1);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const router = useRouter();
 	const [patientSearch, setPatientSearch] = useState("");
 	const [memberSearch, setMemberSearch] = useState("");
@@ -127,13 +128,14 @@ export function NewClaimView() {
 
 	const onSubmit = async (values: ClaimFormValues) => {
 		const loadingId = toast.loading("Creating comprehensive claim...");
+		setIsSubmitting(true);
 		try {
 			const input = {
 				claimData: {
 					serviceFrom: values.serviceFrom,
 					serviceTo: values.serviceTo,
 					billingNpi: values.billingNpi,
-					status: "PENDING",
+					status: "DRAFT",
 					type: "PROFESSIONAL",
 				},
 				providerId: "PRV-001", // Should come from context
@@ -169,6 +171,8 @@ export function NewClaimView() {
 			}
 		} catch (error) {
 			toast.error("An unexpected error occurred", { id: loadingId });
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
@@ -646,30 +650,74 @@ export function NewClaimView() {
 						)}
 
 						{step === 4 && (
-							<div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+							<div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
 								<div className="p-8 rounded-2xl bg-primary/[0.02] border-2 border-dashed border-primary/20 flex flex-col items-center text-center space-y-4">
 									<div className="p-4 bg-emerald-500/10 rounded-full">
-										<CheckCircle className="w-12 h-12 text-emerald-500" />
+										<CheckCircle className="w-10 h-10 text-emerald-500" />
 									</div>
-									<div>
-										<h3 className="text-xl font-black tracking-tight">Review & Create</h3>
-										<p className="text-sm text-muted-foreground font-medium max-w-sm mx-auto">
-											Verify all clinical and patient details before generating the comprehensive claim record.
+									<div className="space-y-1">
+										<h3 className="text-xl font-black tracking-tight italic uppercase">Final Review</h3>
+										<p className="text-xs text-muted-foreground font-bold max-w-sm mx-auto uppercase tracking-wider opacity-60">
+											Verify all clinical and patient details before generation.
 										</p>
 									</div>
 								</div>
-								
-								<div className="grid grid-cols-2 gap-4">
-									<div className="p-4 rounded-xl bg-card border border-border/40 flex flex-col">
-										<span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Total Charges</span>
-										<span className="text-lg font-black text-foreground tabular-nums">
-											$
-											{form.watch("lines").reduce((acc, curr) => acc + parseFloat(curr.billedAmount || "0"), 0).toFixed(2)}
+
+								{/* Structured Review Grid */}
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+									<div className="space-y-4">
+										<h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+											<User className="w-3 h-3" />
+											Patient & Subscriber
+										</h4>
+										<div className="p-4 rounded-xl border border-border/40 bg-card space-y-3">
+											<div className="flex justify-between">
+												<span className="text-[10px] font-bold text-muted-foreground uppercase">Patient</span>
+												<span className="text-xs font-black">{form.watch("patientName") || "N/A"}</span>
+											</div>
+											<div className="flex justify-between">
+												<span className="text-[10px] font-bold text-muted-foreground uppercase">DOB</span>
+												<span className="text-xs font-black">{form.watch("dob") || "N/A"}</span>
+											</div>
+											<div className="flex justify-between">
+												<span className="text-[10px] font-bold text-muted-foreground uppercase">Member ID</span>
+												<span className="text-xs font-black">{form.watch("subscriberId") || "N/A"}</span>
+											</div>
+										</div>
+									</div>
+
+									<div className="space-y-4">
+										<h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+											<Clipboard className="w-3 h-3" />
+											Insurance Details
+										</h4>
+										<div className="p-4 rounded-xl border border-border/40 bg-card space-y-3">
+											<div className="flex justify-between">
+												<span className="text-[10px] font-bold text-muted-foreground uppercase">Payer ID</span>
+												<span className="text-xs font-black uppercase">{form.watch("payerId") || "N/A"}</span>
+											</div>
+											<div className="flex justify-between">
+												<span className="text-[10px] font-bold text-muted-foreground uppercase">Billing NPI</span>
+												<span className="text-xs font-black">{form.watch("billingNpi") || "N/A"}</span>
+											</div>
+											<div className="flex justify-between border-t border-border/40 pt-2 mt-2">
+												<span className="text-[10px] font-bold text-muted-foreground uppercase">Service Period</span>
+												<span className="text-[11px] font-black">{form.watch("serviceFrom")} - {form.watch("serviceTo")}</span>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<div className="p-4 rounded-xl bg-slate-950 text-white flex justify-between items-center px-8 border border-white/10">
+									<div className="flex flex-col">
+										<span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">Total Claim Value</span>
+										<span className="text-2xl font-black tabular-nums tracking-tight">
+											ETB {form.watch("lines").reduce((acc, curr) => acc + parseFloat(curr.billedAmount || "0"), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
 										</span>
 									</div>
-									<div className="p-4 rounded-xl bg-card border border-border/40 flex flex-col">
-										<span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Calculated Lines</span>
-										<span className="text-lg font-black text-foreground tabular-nums">{form.watch("lines").length} Units</span>
+									<div className="text-right">
+										<span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] block">Volume</span>
+										<span className="text-lg font-black">{form.watch("lines").length} Units</span>
 									</div>
 								</div>
 							</div>
@@ -711,9 +759,10 @@ export function NewClaimView() {
 									type="button"
 									onClick={form.handleSubmit(onSubmit as any)}
 									icon={Send}
-									className="w-48 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+									disabled={isSubmitting}
+									className={`w-48 bg-primary text-primary-foreground shadow-lg shadow-primary/20 ${isSubmitting ? "opacity-70" : ""}`}
 								>
-									Create Claim
+									{isSubmitting ? "Processing..." : "Create Claim"}
 								</PremiumButton>
 							)}
 						</div>
@@ -728,10 +777,10 @@ export function NewClaimView() {
 						</CardTitle>
 						<div className="space-y-4">
 							{[
-								{ label: "Patient", value: "Not selected" },
+								{ label: "Patient", value: form.watch("patientName") || "Un-selected" },
 								{ label: "Facility", value: "Tena-Adam Medical Center" },
-								{ label: "Type", value: "Direct Claim" },
-								{ label: "Currency", value: "ETB / USD" },
+								{ label: "Total Amount", value: `ETB ${form.watch("lines").reduce((acc, curr) => acc + parseFloat(curr.billedAmount || "0"), 0).toFixed(2)}` },
+								{ label: "Currency", value: "ETB" },
 							].map((item, i) => (
 								<div
 									key={i}
@@ -740,7 +789,7 @@ export function NewClaimView() {
 									<span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">
 										{item.label}
 									</span>
-									<span className="text-xs font-bold text-foreground">
+									<span className="text-xs font-bold text-foreground truncate max-w-[150px]">
 										{item.value}
 									</span>
 								</div>
