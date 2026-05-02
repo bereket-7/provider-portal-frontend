@@ -14,40 +14,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
-
-const mock835Data = [
-	{
-		id: "ERA-835-001",
-		checkNumber: "CHK-99281",
-		date: "2024-02-18",
-		payer: "BlueCross BlueShield",
-		amount: "$4,250.00",
-		status: "Processed",
-		claimsCount: 12,
-	},
-	{
-		id: "ERA-835-002",
-		checkNumber: "CHK-99282",
-		date: "2024-02-17",
-		payer: "Aetna Healthcare",
-		amount: "$1,800.00",
-		status: "Pending",
-		claimsCount: 5,
-	},
-	{
-		id: "ERA-835-003",
-		checkNumber: "EFT-88321",
-		date: "2024-02-16",
-		payer: "UnitedHealth Group",
-		amount: "$12,400.00",
-		status: "Processed",
-		claimsCount: 28,
-	},
-];
-
-type Remittance = (typeof mock835Data)[0];
+import { useReconciliations } from "@/hooks/useReconciliations";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 
 export function EDI835View() {
+	const router = useRouter();
+	const { data: reconciliations, isLoading } = useReconciliations();
+
+	if (isLoading) {
+		return (
+			<div className="flex items-center justify-center min-h-[400px]">
+				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+			</div>
+		);
+	}
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			<div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
@@ -147,24 +128,25 @@ export function EDI835View() {
 				<DataTable
 					title="Remittance Ledger"
 					subtitle="Real-time payment advice from clinical payers"
-					data={mock835Data}
+					data={reconciliations || []}
+					onRowClick={(rec: any) => router.push(`/edi-835/${rec.id}`)}
 					columns={[
 						{
 							header: "Remittance Detail",
 							key: "id",
-							render: (era: Remittance) => (
+							render: (rec: any) => (
 								<div className="flex items-center gap-4">
 									<div className="p-2.5 bg-primary/5 rounded-lg border border-primary/10">
 										<Receipt className="w-4 h-4 text-primary" />
 									</div>
 									<div>
 										<p className="text-[13px] font-black text-foreground">
-											{era.id}
+											REC-{rec.id.substring(0, 8)}
 										</p>
 										<div className="flex items-center gap-2 mt-0.5">
 											<Calendar className="w-3 h-3 text-muted-foreground opacity-60" />
 											<span className="text-[9px] font-bold text-muted-foreground uppercase">
-												{era.date} • {era.checkNumber}
+												{rec.payment835?.checkNumber || "N/A"}
 											</span>
 										</div>
 									</div>
@@ -175,17 +157,18 @@ export function EDI835View() {
 							header: "Payer",
 							key: "payer",
 							className: "font-bold text-sm uppercase tracking-tight",
+							render: (rec: any) => rec.payment835?.payer?.name || "Unknown Payer",
 						},
 						{
-							header: "Claims",
-							key: "claimsCount",
+							header: "Claim ID",
+							key: "claim",
 							className: "text-center font-black",
-							render: (era: Remittance) => (
+							render: (rec: any) => (
 								<Badge
 									variant="outline"
 									className="rounded-lg px-2 py-0.5 text-[10px] bg-muted/30"
 								>
-									{era.claimsCount} Claims
+									{rec.claimPayment835?.claim?.claimNumber || "Multiple"}
 								</Badge>
 							),
 						},
@@ -193,20 +176,21 @@ export function EDI835View() {
 							header: "Amount",
 							key: "amount",
 							className: "font-black text-foreground tabular-nums",
+							render: (rec: any) => `$${parseFloat(rec.amount).toLocaleString()}`,
 						},
 						{
 							header: "Status",
 							key: "status",
 							align: "center",
-							render: (era: Remittance) => (
+							render: (rec: any) => (
 								<Badge
 									className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest border-none ${
-										era.status === "Processed"
+										rec.reconciliationStatus === "MATCHED"
 											? "bg-emerald-500/10 text-emerald-600"
 											: "bg-amber-500/10 text-amber-600"
 									}`}
 								>
-									{era.status}
+									{rec.reconciliationStatus}
 								</Badge>
 							),
 						},

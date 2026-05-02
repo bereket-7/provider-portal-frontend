@@ -12,42 +12,62 @@ import {
 	Printer,
 	ShieldCheck,
 	User,
+	Send,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
+import { useClaim } from "@/hooks/useClaim";
+import { submitClaimToInsurance } from "@/_service/actions/claim-actions";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 interface ClaimDetailViewProps {
 	id: string;
 }
 
 export function ClaimDetailView({ id }: ClaimDetailViewProps) {
-	// Mock data for the specific claim
-	const claim = {
-		id: id,
-		patientName: "Sarah Johnson",
-		patientId: "PAT-93821",
-		serviceDate: "Feb 15, 2026",
-		status: "Approved" as const,
-		type: "Clinical",
-		amount: "1,200.00",
-		planPaid: "960.00",
-		patientResp: "240.00",
-		provider: "Dr. Abraham Bekele",
-		facility: "General Medical Center",
-		diagnosis: "J34.2 • Deviated nasal septum",
-		procedure: "30520 • Septoplasty or submucous resection",
-		submittedAt: "Feb 15, 2026 09:12 AM",
-		adjudicatedAt: "Feb 15, 2026 04:30 PM",
-		referenceId: "CLM-ADJ-88219",
+	const { data: claim, isLoading, refetch } = useClaim(id);
+
+	const handleSendToInsurance = async () => {
+		const loadingId = toast.loading("Generating 837 and transmitting to insurance...");
+		try {
+			const response = await submitClaimToInsurance(id);
+			if (response.ok) {
+				toast.success(response.message || "837 transmitted successfully", { id: loadingId });
+				refetch();
+			} else {
+				toast.error(response.message || "Transmission failed", { id: loadingId });
+			}
+		} catch (error) {
+			toast.error("An unexpected error occurred during transmission", { id: loadingId });
+		}
 	};
 
-	const statusColors = {
-		Approved: "bg-emerald-500/10 text-emerald-500",
-		Pending: "bg-amber-500/10 text-amber-500",
-		Denied: "bg-rose-500/10 text-rose-500",
+	const statusColors: Record<string, string> = {
+		APPROVED: "bg-emerald-500/10 text-emerald-500",
+		PENDING: "bg-amber-500/10 text-amber-500",
+		DENIED: "bg-rose-500/10 text-rose-500",
+		"837_SUBMITTED": "bg-blue-500/10 text-blue-500",
 	};
+
+	if (isLoading) {
+		return (
+			<div className="flex items-center justify-center min-h-[400px]">
+				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+			</div>
+		);
+	}
+
+	if (!claim) {
+		return (
+			<div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+				<p className="text-xl font-black text-muted-foreground uppercase opacity-50">Claim Not Found</p>
+				<Link href="/claims" className="text-primary font-black uppercase tracking-widest text-xs">Back to Ledger</Link>
+			</div>
+		);
+	}
 
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6 animate-in fade-in duration-700">
@@ -98,7 +118,16 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 						<button className="p-2.5 rounded-xl border border-border/40 bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-all shadow-sm">
 							<Printer className="w-4 h-4" />
 						</button>
-						<PremiumButton className="px-6 h-10 shadow-lg shadow-primary/10 text-[9px] uppercase font-black tracking-widest rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
+						{claim.status !== "837_SUBMITTED" && (
+							<PremiumButton 
+								onClick={handleSendToInsurance}
+								className="px-6 h-10 shadow-lg shadow-primary/10 text-[9px] uppercase font-black tracking-widest rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+							>
+								<Send className="w-3.5 h-3.5 mr-2" />
+								Submit to Insurance
+							</PremiumButton>
+						)}
+						<PremiumButton variant="outline" className="px-6 h-10 border-border/40 text-[9px] uppercase font-black tracking-widest rounded-xl transition-all">
 							<Download className="w-3.5 h-3.5 mr-2" />
 							Export Details
 						</PremiumButton>
@@ -160,10 +189,10 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 											</div>
 											<div>
 												<p className="text-sm font-black text-foreground">
-													{claim.patientName}
+													{claim.patient?.firstName} {claim.patient?.lastName}
 												</p>
 												<p className="text-[10px] font-bold text-muted-foreground uppercase tabular-nums">
-													ID: {claim.patientId}
+													ID: {claim.patient?.id}
 												</p>
 											</div>
 										</div>
@@ -184,7 +213,7 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 											</div>
 											<div>
 												<p className="text-sm font-black text-foreground">
-													{claim.serviceDate}
+													{claim.serviceFrom}
 												</p>
 												<p className="text-[10px] font-bold text-muted-foreground uppercase">
 													Professional Service Date
@@ -204,23 +233,35 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 											Diagnosis Codes (ICD-10)
 										</h4>
 									</div>
-									<div className="p-6 bg-muted/20 border border-border/40 rounded-3xl">
-										<p className="text-sm font-bold text-foreground">
-											{claim.diagnosis}
-										</p>
+									<div className="p-6 bg-muted/20 border border-border/40 rounded-3xl space-y-2">
+										{claim.diagnoses?.map((diag: any) => (
+											<div key={diag.id} className="flex items-center gap-2">
+												<Badge variant="outline" className="text-[9px] font-black border-primary/20">{diag.code}</Badge>
+												<span className="text-xs font-bold text-foreground">Diagnosis {diag.position}</span>
+											</div>
+										))}
 									</div>
 								</div>
 								<div className="space-y-4">
 									<div className="flex items-center gap-2 mb-2">
 										<div className="h-4 w-1 bg-primary rounded-full" />
 										<h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70">
-											Service Codes (CPT/HCPCS)
+											Service Lines (CPT)
 										</h4>
 									</div>
-									<div className="p-6 bg-muted/20 border border-border/40 rounded-3xl">
-										<p className="text-sm font-bold text-foreground">
-											{claim.procedure}
-										</p>
+									<div className="p-6 bg-muted/20 border border-border/40 rounded-3xl space-y-3">
+										{claim.lines?.map((line: any) => (
+											<div key={line.id} className="flex justify-between items-center group/line">
+												<div className="flex items-center gap-3">
+													<div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-black">{line.lineNumber}</div>
+													<div>
+														<p className="text-xs font-black text-foreground">{line.cptCode}</p>
+														<p className="text-[9px] font-bold text-muted-foreground uppercase">{line.units} Units • {line.serviceDate}</p>
+													</div>
+												</div>
+												<p className="text-xs font-black text-primary tabular-nums">${line.billedAmount}</p>
+											</div>
+										))}
 									</div>
 								</div>
 							</div>
@@ -238,8 +279,8 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 										<div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
 											<User className="w-4 h-4 text-primary" />
 										</div>
-										<p className="text-sm font-bold text-foreground">
-											{claim.provider}
+										<p className="text-sm font-bold text-foreground lowercase">
+											NPI: {claim.billingNpi || "1928374650"}
 										</p>
 									</div>
 								</div>
@@ -247,7 +288,7 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 									<div className="flex items-center gap-2 mb-2">
 										<div className="h-4 w-1 bg-primary rounded-full" />
 										<h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70">
-											Service Facility
+											Payer Information
 										</h4>
 									</div>
 									<div className="flex items-center gap-3">
@@ -255,7 +296,7 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 											<ShieldCheck className="w-4 h-4 text-emerald-600" />
 										</div>
 										<p className="text-sm font-bold text-foreground">
-											{claim.facility}
+											{claim.payer?.name} ({claim.payer?.payerCode})
 										</p>
 									</div>
 								</div>
