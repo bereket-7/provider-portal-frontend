@@ -56,10 +56,10 @@ export async function getPayers(search?: string) {
 	return await graphqlRequest(query, { search });
 }
 
-export async function getClaims(filter?: any) {
+export async function getClaims(search?: string, status?: string) {
 	const query = `
-    query GetClaims($filter: ClaimFilterInput) {
-      claims(filter: $filter) {
+    query GetClaims($search: String, $status: String) {
+      claims(search: $search, status: $status) {
         id
         claimNumber
         patient {
@@ -75,7 +75,7 @@ export async function getClaims(filter?: any) {
     }
   `;
 
-	return await graphqlRequest(query, { filter });
+	return await graphqlRequest(query, { search, status });
 }
 
 export async function getClaim(id: string) {
@@ -91,6 +91,7 @@ export async function getClaim(id: string) {
         totalCharges
         totalPaid
         totalAdjustments
+        ediStatus
         patient {
           id
           firstName
