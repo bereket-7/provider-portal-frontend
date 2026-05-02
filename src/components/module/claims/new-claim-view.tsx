@@ -130,11 +130,14 @@ export function NewClaimView() {
 		const loadingId = toast.loading("Creating comprehensive claim...");
 		setIsSubmitting(true);
 		try {
+			const totalCharges = values.lines.reduce((acc, curr) => acc + parseFloat(curr.billedAmount || "0"), 0).toFixed(2);
+			
 			const input = {
 				claimData: {
 					serviceFrom: values.serviceFrom,
 					serviceTo: values.serviceTo,
 					billingNpi: values.billingNpi,
+					totalCharges: totalCharges,
 					status: "DRAFT",
 					type: "PROFESSIONAL",
 				},
