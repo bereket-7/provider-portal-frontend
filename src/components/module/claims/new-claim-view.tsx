@@ -47,6 +47,10 @@ const claimSchema = z.object({
 				lineNumber: z.number(),
 				serviceDate: z.string().min(1, "Required"),
 				cptCode: z.string().min(1, "Required"),
+				modifiers: z.string().optional(),
+				pos: z.string().min(1, "POS is required"),
+				pointer1: z.number().min(1, "At least one pointer required"),
+				pointer2: z.number().optional(),
 				units: z.string().min(1, "Required"),
 				billedAmount: z.string().min(1, "Required"),
 			})
@@ -87,7 +91,18 @@ export function NewClaimView() {
 			serviceFrom: new Date().toISOString().split("T")[0],
 			serviceTo: new Date().toISOString().split("T")[0],
 			billingNpi: "",
-			lines: [{ lineNumber: 1, serviceDate: "", cptCode: "", units: "1", billedAmount: "" }],
+			lines: [
+				{
+					lineNumber: 1,
+					serviceDate: "",
+					cptCode: "",
+					modifiers: "",
+					pos: "11",
+					pointer1: 1,
+					units: "1",
+					billedAmount: "",
+				},
+			],
 			diagnoses: [{ position: 1, code: "", codeType: "ICD10" }],
 		},
 	});
@@ -130,6 +145,10 @@ export function NewClaimView() {
 						lineNumber: l.lineNumber,
 						serviceDate: l.serviceDate,
 						cptCode: l.cptCode,
+						cptModifiers: l.modifiers,
+						placeOfService: l.pos,
+						diagnosisPointer1: l.pointer1,
+						diagnosisPointer2: l.pointer2 || null,
 						units: l.units,
 						billedAmount: l.billedAmount,
 					},
@@ -409,6 +428,9 @@ export function NewClaimView() {
 													lineNumber: lineFields.length + 1,
 													serviceDate: "",
 													cptCode: "",
+													modifiers: "",
+													pos: "11",
+													pointer1: 1,
 													units: "1",
 													billedAmount: "",
 												})
@@ -482,6 +504,66 @@ export function NewClaimView() {
 																className="w-full pl-6 pr-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-black tabular-nums"
 															/>
 														</div>
+													</div>
+												</div>
+
+												{/* Clinical Extras Row */}
+												<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border/10">
+													<div className="space-y-2">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															POS (Place of Service)
+														</label>
+														<select
+															{...form.register(`lines.${index}.pos` as const)}
+															className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-bold"
+														>
+															<option value="11">11 - Office</option>
+															<option value="12">12 - Home</option>
+															<option value="21">21 - Inpatient Hospital</option>
+															<option value="22">22 - Outpatient Hospital</option>
+															<option value="23">23 - ER - Hospital</option>
+														</select>
+													</div>
+													<div className="space-y-2">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															Modifiers (e.g. 25)
+														</label>
+														<input
+															{...form.register(`lines.${index}.modifiers` as const)}
+															placeholder="e.g. 25, 59"
+															className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-bold"
+														/>
+													</div>
+													<div className="space-y-2">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															Diag Pointer 1
+														</label>
+														<select
+															{...form.register(`lines.${index}.pointer1` as const, { valueAsNumber: true })}
+															className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-black text-emerald-600"
+														>
+															{diagFields.map((_, i) => (
+																<option key={i} value={i + 1}>
+																	{i + 1}
+																</option>
+															))}
+														</select>
+													</div>
+													<div className="space-y-2">
+														<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+															Diag Pointer 2
+														</label>
+														<select
+															{...form.register(`lines.${index}.pointer2` as const, { valueAsNumber: true })}
+															className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-xs font-bold"
+														>
+															<option value="">None</option>
+															{diagFields.map((_, i) => (
+																<option key={i} value={i + 1}>
+																	{i + 1}
+																</option>
+															))}
+														</select>
 													</div>
 												</div>
 												{index > 0 && (
