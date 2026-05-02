@@ -5,7 +5,7 @@ export async function graphqlRequest<T = any>(
 	variables: Record<string, any> = {}
 ): Promise<{ ok: boolean; data?: T; message?: string; errors?: any[] }> {
 	try {
-		const response = await axiosInstance.post("/graphql", {
+		const response = await axiosInstance.post("/graphql/", {
 			query,
 			variables,
 		});

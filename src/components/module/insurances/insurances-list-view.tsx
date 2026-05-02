@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
+import { usePayers } from "@/hooks/usePayers";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -115,8 +116,6 @@ const insurances = [
 	},
 ];
 
-const types = Array.from(new Set(insurances.map((i) => i.type)));
-
 export function InsurancesListView() {
 	const [activeTab, setActiveTab] = useState<
 		"All" | "Active" | "Pending" | "Suspended"
@@ -125,15 +124,21 @@ export function InsurancesListView() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedType, setSelectedType] = useState("All Types");
 
-	const filteredInsurances = insurances.filter((p) => {
-		const matchesTab = activeTab === "All" || p.category === activeTab;
-		const matchesSearch =
-			p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			p.type.toLowerCase().includes(searchTerm.toLowerCase());
-		const matchesType = selectedType === "All Types" || p.type === selectedType;
+	const { data: payers, isLoading } = usePayers(searchTerm);
 
-		return matchesTab && matchesSearch && matchesType;
-	});
+	const filteredInsurances = (payers || []).map((p: any) => ({
+		id: p.id,
+		name: p.name,
+		type: "Commercial", // Default for now
+		tier: "National",
+		network: "Tena'adam Primary",
+		status: "Active",
+		category: "Active",
+		image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800",
+		payerCode: p.payerCode
+	}));
+
+	const types = ["Commercial", "Social", "Private"];
 
 	const cardShadow =
 		"shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-500";
@@ -212,7 +217,7 @@ export function InsurancesListView() {
 			/>
 
 			{/* Stats Grid */}
-			<StatsGrid />
+			<StatsGrid count={filteredInsurances.length} />
 
 			{/* Filter & Search Bar */}
 			<div className="flex flex-col md:flex-row items-stretch gap-0 relative z-10 bg-card border border-border/40 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] overflow-hidden">
@@ -279,7 +284,7 @@ export function InsurancesListView() {
 			{filteredInsurances.length > 0 ? (
 				viewType === "grid" ? (
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-						{filteredInsurances.map((insurance) => (
+						{filteredInsurances.map((insurance: any) => (
 							<InsuranceCard
 								key={insurance.id}
 								insurance={insurance}
@@ -447,35 +452,35 @@ function InsuranceCard({
 	);
 }
 
-function StatsGrid() {
+function StatsGrid({ count }: { count: number }) {
 	return (
 		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
 			{[
 				{
 					title: "Total Carriers",
-					value: "42",
-					trend: "+2 this month",
+					value: count.toString(),
+					trend: "Seeded Data",
 					icon: Users,
 					color: "primary",
 				},
 				{
 					title: "Active Coverage",
-					value: "38",
-					trend: "90% Active",
+					value: count.toString(),
+					trend: "100% Active",
 					icon: Activity,
 					color: "primary",
 				},
 				{
 					title: "Network Verified",
-					value: "95%",
+					value: "100%",
 					trend: "Top Tier",
 					icon: ShieldCheck,
 					color: "primary",
 				},
 				{
 					title: "Pending Review",
-					value: "4",
-					trend: "2 Urgent",
+					value: "0",
+					trend: "Clean",
 					icon: Clock,
 					color: "amber",
 				},
