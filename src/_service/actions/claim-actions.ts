@@ -125,13 +125,13 @@ export async function getClaim(id: string) {
 
 export async function submitClaimToInsurance(id: string) {
 	const mutation = `
-    mutation SubmitClaimToInsurance($claimId: String!) {
-      submitClaimToInsurance(claimId: $claimId) {
+    mutation SubmitClaimToInsurance($id: String!) {
+      submitClaimToInsurance(id: $id) {
         success
         message
       }
     }
   `;
 
-	return await graphqlRequest(mutation, { claimId: id });
+	return await graphqlRequest(mutation, { id });
 }
