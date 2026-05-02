@@ -14,6 +14,35 @@ export async function createComprehensiveClaim(input: any) {
 	return await graphqlRequest(mutation, { input });
 }
 
+export async function getPatients(search?: string) {
+	const query = `
+    query GetPatients($search: String) {
+      patients(search: $search) {
+        id
+        firstName
+        lastName
+        birthDate
+        gender
+      }
+    }
+  `;
+	return await graphqlRequest(query, { search });
+}
+
+export async function getMembers(search?: string) {
+	const query = `
+    query GetMembers($search: String) {
+      members(search: $search) {
+        id
+        firstName
+        lastName
+        memberId
+      }
+    }
+  `;
+	return await graphqlRequest(query, { search });
+}
+
 export async function getClaims(filter?: any) {
 	const query = `
     query GetClaims($filter: ClaimFilterInput) {

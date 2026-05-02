@@ -27,6 +27,9 @@ import { PremiumButton } from "@/components/ui/custom/premium-button";
 import { createComprehensiveClaim } from "@/_service/actions/claim-actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { usePatients } from "@/hooks/usePatients";
+import { useMembers } from "@/hooks/useMembers";
+import { SearchableSelect } from "@/components/ui/custom/searchable-select";
 
 const claimSchema = z.object({
 	patientName: z.string().min(1, "Patient name is required"),
@@ -64,6 +67,11 @@ type ClaimFormValues = z.infer<typeof claimSchema>;
 export function NewClaimView() {
 	const [step, setStep] = useState(1);
 	const router = useRouter();
+	const [patientSearch, setPatientSearch] = useState("");
+	const [memberSearch, setMemberSearch] = useState("");
+
+	const { data: patients } = usePatients(patientSearch);
+	const { data: members } = useMembers(memberSearch);
 
 	const form = useForm<ClaimFormValues>({
 		resolver: zodResolver(claimSchema),
@@ -240,69 +248,70 @@ export function NewClaimView() {
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div className="space-y-2">
 									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-										Patient Full Name
+										Select Patient
 									</label>
-									<input
-										{...form.register("patientName")}
-										type="text"
-										placeholder="e.g. John Doe"
-										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
-									/>
-									{form.formState.errors.patientName && (
-										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
-											{form.formState.errors.patientName.message}
-										</p>
-									)}
-								</div>
-								<div className="space-y-2">
-									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-										Member ID (Patient ID)
-									</label>
-									<input
-										{...form.register("memberId")}
-										type="text"
-										placeholder="e.g. PAT-12345"
-										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
+									<SearchableSelect
+										options={(patients || []).map((p: any) => ({
+											value: p.id,
+											label: `${p.firstName} ${p.lastName}`,
+										}))}
+										value={form.watch("memberId")}
+										onSearchChange={setPatientSearch}
+										onSelect={(val) => {
+											const patient = patients?.find((p: any) => p.id === val);
+											if (patient) {
+												form.setValue("memberId", patient.id);
+												form.setValue("patientName", `${patient.firstName} ${patient.lastName}`);
+												if (patient.birthDate) {
+													form.setValue("dob", patient.birthDate);
+												}
+											}
+										}}
+										placeholder="Search by name or ID..."
 									/>
 									{form.formState.errors.memberId && (
 										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
-											{form.formState.errors.memberId.message}
+											Patient is required
 										</p>
 									)}
 								</div>
 								<div className="space-y-2">
 									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-										Date of Birth
+										Policy Number (Subscriber)
 									</label>
-									<div className="relative">
-										<Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-										<input
-											{...form.register("dob")}
-											type="date"
-											className="w-full pl-11 pr-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
-										/>
-									</div>
-									{form.formState.errors.dob && (
-										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
-											{form.formState.errors.dob.message}
-										</p>
-									)}
-								</div>
-								<div className="space-y-2">
-									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-										Policy Number (Subscriber ID)
-									</label>
-									<input
-										{...form.register("subscriberId")}
-										type="text"
-										placeholder="e.g. SUB-998877"
-										className="w-full px-4 py-3 bg-primary/5 border border-border/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-bold"
+									<SearchableSelect
+										options={(members || []).map((m: any) => ({
+											value: m.memberId,
+											label: `${m.firstName} ${m.lastName} (${m.memberId})`,
+										}))}
+										value={form.watch("subscriberId")}
+										onSearchChange={setMemberSearch}
+										onSelect={(val) => {
+											form.setValue("subscriberId", val);
+										}}
+										placeholder="Search by name or policy #..."
 									/>
 									{form.formState.errors.subscriberId && (
 										<p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-wider">
-											{form.formState.errors.subscriberId.message}
+											Subscriber is required
 										</p>
 									)}
+								</div>
+								<div className="space-y-1.5 opacity-50 grayscale pointer-events-none">
+									<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Patient DOB (Auto-filled)</label>
+									<input
+										{...form.register("dob")}
+										readOnly
+										className="w-full px-4 py-2.5 bg-primary/5 border border-border/40 rounded-xl text-xs font-bold"
+									/>
+								</div>
+								<div className="space-y-1.5 opacity-50 grayscale pointer-events-none">
+									<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Patient Name (Auto-filled)</label>
+									<input
+										{...form.register("patientName")}
+										readOnly
+										className="w-full px-4 py-2.5 bg-primary/5 border border-border/40 rounded-xl text-xs font-bold"
+									/>
 								</div>
 							</div>
 						)}
