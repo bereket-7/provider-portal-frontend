@@ -18,10 +18,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { useClaims } from "@/hooks/useClaims";
+import { syncRemittances } from "@/_service/actions/claim-actions";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export function ClaimsListView() {
 	const router = useRouter();
-	const { data: claims, isLoading } = useClaims();
+	const { data: claims, isLoading, refetch } = useClaims();
+	const [isSyncing, setIsSyncing] = useState(false);
 
 	if (isLoading) {
 		return (
@@ -30,6 +34,23 @@ export function ClaimsListView() {
 			</div>
 		);
 	}
+
+	const handleSync = async () => {
+		setIsSyncing(true);
+		try {
+			const res = await syncRemittances();
+			if (res.success) {
+				toast.success(res.message);
+				refetch(); // Refresh the claims list
+			} else {
+				toast.error(res.message);
+			}
+		} catch (error) {
+			toast.error("Failed to sync remittances");
+		} finally {
+			setIsSyncing(false);
+		}
+	};
 
 	return (
 		<div className="relative space-y-6 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
@@ -44,7 +65,20 @@ export function ClaimsListView() {
 				subtitle="Live Processing • Tena'adam Team"
 				actions={
 					<div className="flex items-center gap-3">
-						<div className="flex items-center gap-1">
+						<div className="flex items-center gap-2">
+							<button 
+								onClick={handleSync}
+								disabled={isSyncing}
+								className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-xl text-xs font-black uppercase tracking-wider hover:bg-secondary/80 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+							>
+								{isSyncing ? (
+									<div className="h-3 w-3 animate-spin rounded-full border-b-2 border-current" />
+								) : (
+									<ArrowUpRight className="w-4 h-4" />
+								)}
+								Sync
+							</button>
+							<div className="h-4 w-px bg-border/40 hidden md:block mx-1" />
 							<button className="px-4 py-1.5 text-primary text-[10px] font-black uppercase tracking-wider relative">
 								All Claims
 								<span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />

@@ -135,3 +135,21 @@ export async function submitClaimToInsurance(id: string) {
 
 	return await graphqlRequest(mutation, { id });
 }
+
+export async function syncRemittances() {
+	const mutation = `
+    mutation SyncRemittances {
+      pollRemittances {
+        success
+        message
+        processedFiles
+      }
+    }
+  `;
+
+	const res = await graphqlRequest(mutation);
+	if (!res.ok) {
+        return { success: false, message: res.message || "Failed to sync" };
+    }
+	return res.data?.pollRemittances || { success: false, message: "No data returned" };
+}
