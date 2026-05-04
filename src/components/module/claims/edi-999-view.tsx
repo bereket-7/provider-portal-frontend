@@ -25,51 +25,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
-
-type Acknowledgment = (typeof mockAcknowledgments)[0];
-
-const trendData = [
-	{ date: "Feb 11", total: 120, errors: 5 },
-	{ date: "Feb 12", total: 150, errors: 8 },
-	{ date: "Feb 13", total: 130, errors: 4 },
-	{ date: "Feb 14", total: 180, errors: 12 },
-	{ date: "Feb 15", total: 160, errors: 6 },
-	{ date: "Feb 16", total: 210, errors: 9 },
-	{ date: "Feb 17", total: 195, errors: 7 },
-];
-
-const mockAcknowledgments = [
-	{
-		id: "ACK-999-001",
-		controlNumber: "000000123",
-		date: "2024-02-17",
-		time: "10:30 AM",
-		status: "Accepted",
-		errors: 0,
-		sender: "TENA-SUB-001",
-		receiver: "PAYER-001",
-	},
-	{
-		id: "ACK-999-002",
-		controlNumber: "000000124",
-		date: "2024-02-16",
-		time: "02:15 PM",
-		status: "Rejected",
-		errors: 12,
-		sender: "TENA-SUB-001",
-		receiver: "PAYER-002",
-	},
-	{
-		id: "ACK-999-003",
-		controlNumber: "000000125",
-		date: "2024-02-16",
-		time: "09:45 AM",
-		status: "Partially Accepted",
-		errors: 3,
-		sender: "TENA-SUB-001",
-		receiver: "PAYER-001",
-	},
-];
+import { use999Acknowledgments } from "@/hooks/use999Acknowledgments";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
 	if (active && payload && payload.length) {
@@ -97,7 +55,82 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 	return null;
 };
 
+const getAckLabel = (code: string) => {
+	const labels: Record<string, string> = {
+		A: "Accepted",
+		E: "Accepted w/ Errors",
+		M: "Rejected (MAC Failed)",
+		P: "Partially Accepted",
+		R: "Rejected",
+		W: "Rejected (Assurance Failed)",
+		X: "Rejected (Decryption Failed)",
+	};
+	return labels[code] || "Unknown";
+};
+
 export function EDI999View() {
+	const { data: acknowledgments, isLoading } = use999Acknowledgments();
+
+	if (isLoading) {
+		return (
+			<div className="space-y-8 p-8">
+				<Skeleton className="h-20 w-full rounded-2xl" />
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<Skeleton className="h-32 rounded-3xl" />
+					<Skeleton className="h-32 rounded-3xl" />
+					<Skeleton className="h-32 rounded-3xl" />
+				</div>
+				<Skeleton className="h-[400px] w-full rounded-3xl" />
+			</div>
+		);
+	}
+
+	const trendMap = (acknowledgments || []).reduce((acc: any, curr: any) => {
+		const date = format(new Date(curr.receivedAt), "MMM dd");
+		if (!acc[date]) {
+			acc[date] = { date, total: 0, errors: 0 };
+		}
+		acc[date].total += 1;
+		acc[date].errors += curr.errorCount || 0;
+		return acc;
+	}, {});
+
+	const trendData = Object.values(trendMap).sort((a: any, b: any) => 
+		new Date(a.date).getTime() - new Date(b.date).getTime()
+	);
+
+	const passRate = acknowledgments?.length 
+		? ((acknowledgments.filter((a: any) => a.isAccepted).length / acknowledgments.length) * 100).toFixed(1)
+		: "0.0";
+	
+	const totalErrors = acknowledgments?.reduce((sum: number, a: any) => sum + (a.errorCount || 0), 0) || 0;
+
+	const metrics = [
+		{
+			label: "Throughput",
+			value: `${passRate}%`,
+			desc: "Syntactical pass rate",
+			icon: Activity,
+			color: "text-emerald-500",
+			bg: "bg-emerald-500/10",
+		},
+		{
+			label: "Total Errors",
+			value: totalErrors.toString(),
+			desc: "Technical compliance issues",
+			icon: AlertCircle,
+			color: "text-rose-500",
+			bg: "bg-rose-500/10",
+		},
+		{
+			label: "Acknowledgments",
+			value: acknowledgments?.length.toString() || "0",
+			desc: "Functional groups processed",
+			icon: ClipboardCheck,
+			color: "text-primary",
+			bg: "bg-primary/10",
+		},
+	];
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			{/* Dynamic Background Elements */}
@@ -259,24 +292,7 @@ export function EDI999View() {
 
 				{/* Key Metrics Stack */}
 				<div className="md:col-span-4 flex flex-col gap-6">
-					{[
-						{
-							label: "Throughput",
-							value: "98.4%",
-							desc: "Syntactical pass rate",
-							icon: Activity,
-							color: "text-emerald-500",
-							bg: "bg-emerald-500/10",
-						},
-						{
-							label: "Critical Errors",
-							value: "04",
-							desc: "Require immediate action",
-							icon: AlertCircle,
-							color: "text-rose-500",
-							bg: "bg-rose-500/10",
-						},
-					].map((metric, i) => (
+					{metrics.map((metric, i) => (
 						<Card
 							key={i}
 							className="flex-1 border-border/40 bg-card/80 backdrop-blur-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] rounded-[2rem] group hover:shadow-xl transition-all duration-500 overflow-hidden relative"
@@ -315,26 +331,26 @@ export function EDI999View() {
 				<DataTable
 					title="Acknowledgment Registry"
 					subtitle="X12 Functional Acknowledgments (999) • Real-time processing"
-					data={mockAcknowledgments}
+					data={acknowledgments || []}
 					searchPlaceholder="Search Control # or Payer..."
 					onExport={() => console.log("Exporting 999...")}
 					columns={[
 						{
 							header: "Acknowledgment",
-							key: "controlNumber",
-							render: (ack: Acknowledgment) => (
+							key: "interchangeControlNumber",
+							render: (ack: any) => (
 								<div className="flex items-center gap-4">
 									<div className="p-2.5 bg-primary/5 rounded-lg border border-primary/10 transition-colors">
 										<ClipboardCheck className="w-4 h-4 text-primary" />
 									</div>
 									<div>
 										<p className="text-[13px] font-black text-foreground">
-											{ack.controlNumber}
+											ICN: {ack.interchangeControlNumber}
 										</p>
 										<div className="flex items-center gap-2 mt-0.5">
 											<Calendar className="w-3 h-3 text-muted-foreground opacity-60" />
 											<span className="text-[9px] font-bold text-muted-foreground uppercase">
-												{ack.date} • {ack.time}
+												{format(new Date(ack.receivedAt), "MMM dd, yyyy • hh:mm a")}
 											</span>
 										</div>
 									</div>
@@ -343,51 +359,51 @@ export function EDI999View() {
 						},
 						{
 							header: "Entity Mapping",
-							key: "receiver",
-							render: (ack: Acknowledgment) => (
+							key: "senderId",
+							render: (ack: any) => (
 								<div className="space-y-0.5">
 									<p className="text-[11px] font-black text-foreground tracking-tight uppercase">
-										{ack.receiver}
+										REC: {ack.receiverId || "PROVIDER_SYSTEM"}
 									</p>
 									<p className="text-[9px] font-bold text-muted-foreground opacity-60 uppercase">
-										{ack.sender}
+										SND: {ack.senderId || "PAYER_GATEWAY"}
 									</p>
 								</div>
 							),
 						},
 						{
 							header: "Status",
-							key: "status",
+							key: "functionalGroupAckCode",
 							align: "center",
-							render: (ack: Acknowledgment) => (
+							render: (ack: any) => (
 								<Badge
 									className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest border-none ${
-										ack.status === "Accepted"
-											? "bg-emerald-500/10 text-emerald-600 border-none shadow-none"
-											: ack.status === "Rejected"
-												? "bg-rose-500/10 text-rose-600 border-none shadow-none"
-												: "bg-amber-500/10 text-amber-600 border-none shadow-none"
+										ack.isAccepted
+											? "bg-emerald-500/10 text-emerald-600 shadow-none"
+											: ack.isRejected
+												? "bg-rose-500/10 text-rose-600 shadow-none"
+												: "bg-amber-500/10 text-amber-600 shadow-none"
 									}`}
 								>
-									{ack.status}
+									{getAckLabel(ack.functionalGroupAckCode)}
 								</Badge>
 							),
 						},
 						{
 							header: "Details",
-							key: "errors",
-							render: (ack: Acknowledgment) =>
-								ack.errors > 0 ? (
+							key: "errorCount",
+							render: (ack: any) =>
+								ack.hasErrors ? (
 									<div className="flex items-center gap-2 text-rose-600">
 										<AlertCircle className="w-4 h-4" />
 										<span className="text-[10px] font-bold">
-											{ack.errors} Errors Found
+											{ack.errorCount} Errors Found
 										</span>
 									</div>
 								) : (
 									<div className="flex items-center gap-2 text-emerald-600">
 										<CheckCircle className="w-4 h-4" />
-										<span className="text-[10px] font-bold">Verified</span>
+										<span className="text-[10px] font-bold">Compliant</span>
 									</div>
 								),
 						},
