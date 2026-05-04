@@ -22,7 +22,7 @@ import { format } from "date-fns";
 export function EDI837View() {
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const { data: claims, isLoading, refetch } = useClaims(undefined, "DRAFT");
+	const { data: claims, isLoading, refetch } = useClaims(undefined, "draft");
 
 	const handleBatchSubmit = async () => {
 		if (selectedIds.length === 0) {
@@ -117,7 +117,7 @@ export function EDI837View() {
 								<p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
 									{stat.label}
 								</p>
-								<p className="text-2xl font-black text-foreground mt-1 lowercase">
+								<p className="text-2xl font-black text-foreground mt-1 tabular-nums">
 									{stat.value}
 								</p>
 							</div>
