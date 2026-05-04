@@ -20,6 +20,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
+import { useDisputes } from "@/hooks/useDisputes";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -29,78 +32,44 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type Dispute = (typeof disputes)[0];
-
-// Mock data for disputes with categories
-const disputes = [
-	{
-		id: "DSP-001",
-		claimId: "CLM-1042",
-		patient: "Sarah Johnson",
-		reason: "Incomplete Documentation",
-		date: "Feb 17, 2026",
-		amount: "$1,200.00",
-		status: "Pending",
-		category: "Active",
-	},
-	{
-		id: "DSP-002",
-		claimId: "CLM-0985",
-		patient: "Michael Chen",
-		reason: "Incorrect Coding",
-		date: "Feb 16, 2026",
-		amount: "$850.00",
-		status: "Resolved",
-		category: "Resolved",
-	},
-	{
-		id: "DSP-003",
-		claimId: "CLM-1123",
-		patient: "Emma Wilson",
-		reason: "Duplicate Submission",
-		date: "Feb 16, 2026",
-		amount: "$2,400.00",
-		status: "Under Review",
-		category: "Active",
-	},
-	{
-		id: "DSP-004",
-		claimId: "CLM-1056",
-		patient: "James Rodriguez",
-		reason: "Medical Necessity",
-		date: "Feb 15, 2026",
-		amount: "$450.00",
-		status: "Denied",
-		category: "Archived",
-	},
-	{
-		id: "DSP-005",
-		claimId: "CLM-0992",
-		patient: "Olivia Taylor",
-		reason: "Service Non-Covered",
-		date: "Feb 14, 2026",
-		amount: "$1,100.00",
-		status: "Resolved",
-		category: "Resolved",
-	},
-	{
-		id: "DSP-006",
-		claimId: "CLM-1088",
-		patient: "Robert Davis",
-		reason: "Authorization Missing",
-		date: "Feb 14, 2026",
-		amount: "$3,200.00",
-		status: "Pending",
-		category: "Active",
-	},
-];
+const getCategory = (statusCode: string) => {
+	const code = (statusCode || "").toUpperCase();
+	if (["NEW", "UNDER_REVIEW", "PENDING"].includes(code)) return "Active";
+	if (["RESOLVED"].includes(code)) return "Resolved";
+	if (["DENIED", "CLOSED", "ARCHIVED"].includes(code)) return "Archived";
+	return "Active";
+};
 
 export function DisputesListView() {
+	const { data: disputes, isLoading } = useDisputes();
+
 	const [activeTab, setActiveTab] = useState<
 		"Active" | "Resolved" | "Archived"
 	>("Active");
 
-	const filteredDisputes = disputes.filter((d) => d.category === activeTab);
+	if (isLoading) {
+		return (
+			<div className="space-y-8 p-8 max-w-[1500px] mx-auto">
+				<Skeleton className="h-20 w-full rounded-2xl" />
+				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+					<Skeleton className="h-32 rounded-2xl" />
+					<Skeleton className="h-32 rounded-2xl" />
+					<Skeleton className="h-32 rounded-2xl" />
+					<Skeleton className="h-32 rounded-2xl" />
+				</div>
+				<Skeleton className="h-[400px] w-full rounded-3xl" />
+			</div>
+		);
+	}
+
+	const safeDisputes = disputes || [];
+	const filteredDisputes = safeDisputes.filter(
+		(d: any) => getCategory(d.status?.code) === activeTab
+	);
+
+	const activeDisputesCount = safeDisputes.filter((d: any) => getCategory(d.status?.code) === "Active").length;
+	const resolvedDisputesCount = safeDisputes.filter((d: any) => getCategory(d.status?.code) === "Resolved").length;
+	const deniedDisputesCount = safeDisputes.filter((d: any) => d.status?.code?.toUpperCase() === "DENIED").length;
 
 	return (
 		<div className="relative space-y-6 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
@@ -150,29 +119,29 @@ export function DisputesListView() {
 				{[
 					{
 						title: "Open Disputes",
-						value: "24",
-						trend: "High Volume",
+						value: activeDisputesCount.toString(),
+						trend: "High Priority",
 						icon: AlertCircle,
 						color: "primary",
 					},
 					{
-						title: "Pending Payer",
-						value: "12",
-						trend: "Avg 4.2 Days",
+						title: "Total Disputes",
+						value: safeDisputes.length.toString(),
+						trend: "All Queue",
 						icon: MessageSquare,
 						color: "amber",
 					},
 					{
-						title: "Resolved (MTD)",
-						value: "156",
-						trend: "84% Success",
+						title: "Resolved",
+						value: resolvedDisputesCount.toString(),
+						trend: "Archived & Solved",
 						icon: CheckCircle2,
 						color: "emerald",
 					},
 					{
 						title: "Final Denials",
-						value: "8",
-						trend: "-15% YoY",
+						value: deniedDisputesCount.toString(),
+						trend: "Need Review",
 						icon: XCircle,
 						color: "rose",
 					},
@@ -224,24 +193,27 @@ export function DisputesListView() {
 							header: "Dispute ID",
 							key: "id",
 							className: "px-8 font-black text-primary text-xs py-5",
+							render: (dispute: any) => `#${dispute.id.split("-").pop()?.substring(0, 8) || "N/A"}`
 						},
 						{
 							header: "Claim ID",
 							key: "claimId",
 							className: "px-8 font-bold text-xs text-muted-foreground",
+							render: (dispute: any) => dispute.claim?.claimNumber || dispute.claimNumber || "N/A"
 						},
 						{
 							header: "Patient",
 							key: "patient",
 							className: "px-8 font-bold text-sm",
+							render: (dispute: any) => dispute.member ? `${dispute.member.firstName} ${dispute.member.lastName}` : "Unknown"
 						},
 						{
 							header: "Reason",
 							key: "reason",
 							className: "px-8",
-							render: (dispute: Dispute) => (
-								<span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-									{dispute.reason}
+							render: (dispute: any) => (
+								<span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground line-clamp-1 max-w-[200px]">
+									{dispute.description || "N/A"}
 								</span>
 							),
 						},
@@ -249,38 +221,36 @@ export function DisputesListView() {
 							header: "Date",
 							key: "date",
 							className: "px-8 text-xs text-muted-foreground whitespace-nowrap",
-						},
-						{
-							header: "Amount",
-							key: "amount",
-							className: "px-8 font-black tabular-nums",
+							render: (dispute: any) => dispute.createdAt ? format(new Date(dispute.createdAt), "MMM dd, yyyy") : "N/A"
 						},
 						{
 							header: "Status",
 							key: "status",
 							className: "px-8",
-							render: (dispute: Dispute) => (
-								<Badge
-									variant="outline"
-									className={`text-[9px] font-black uppercase tracking-wider border-none ${
-										dispute.status === "Resolved"
-											? "bg-emerald-500/10 text-emerald-500"
-											: dispute.status === "Pending" ||
-												  dispute.status === "Under Review"
-												? "bg-amber-500/10 text-amber-500"
-												: "bg-rose-500/10 text-rose-500"
-									}`}
-								>
-									{dispute.status}
-								</Badge>
-							),
+							render: (dispute: any) => {
+								const cat = getCategory(dispute.status?.code);
+								return (
+									<Badge
+										variant="outline"
+										className={`text-[9px] font-black uppercase tracking-wider border-none ${
+											cat === "Resolved"
+												? "bg-emerald-500/10 text-emerald-500"
+												: cat === "Archived" 
+													? "bg-rose-500/10 text-rose-500"
+													: "bg-amber-500/10 text-amber-500"
+										}`}
+									>
+										{dispute.status?.label || "Unknown"}
+									</Badge>
+								);
+							},
 						},
 						{
 							header: "",
 							key: "action",
 							align: "right",
 							className: "px-8",
-							render: (dispute: Dispute) => (
+							render: (dispute: any) => (
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
 										<button className="p-2 hover:bg-primary/5 rounded-lg transition-colors group/btn">
