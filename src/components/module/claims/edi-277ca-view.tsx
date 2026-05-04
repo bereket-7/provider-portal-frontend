@@ -5,8 +5,10 @@ import {
 	AlertCircle,
 	ArrowUpRight,
 	Calendar,
+	CheckCircle2,
 	ClipboardCheck,
 	FileText,
+	Search,
 	TrendingUp,
 	Zap,
 } from "lucide-react";
@@ -25,54 +27,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
-
-type StatusClaim = (typeof mock277Claims)[0];
-
-const statusTrendData = [
-	{ date: "Feb 11", accepted: 85, rejected: 5, pending: 10 },
-	{ date: "Feb 12", accepted: 110, rejected: 8, pending: 12 },
-	{ date: "Feb 13", accepted: 95, rejected: 4, pending: 8 },
-	{ date: "Feb 14", accepted: 130, rejected: 12, pending: 15 },
-	{ date: "Feb 15", accepted: 115, rejected: 6, pending: 9 },
-	{ date: "Feb 16", accepted: 150, rejected: 9, pending: 11 },
-	{ date: "Feb 17", accepted: 142, rejected: 7, pending: 10 },
-];
-
-const mock277Claims = [
-	{
-		id: "277-ACK-001",
-		claimRef: "CLM-2024-8892",
-		patient: "John Doe",
-		date: "2024-02-17",
-		time: "11:45 AM",
-		status: "Accepted",
-		payer: "BlueCross BlueShield",
-		category: "A1",
-		message: "Claim received and forwarded to payer",
-	},
-	{
-		id: "277-ACK-002",
-		claimRef: "CLM-2024-8893",
-		patient: "Jane Smith",
-		date: "2024-02-17",
-		time: "10:20 AM",
-		status: "Rejected",
-		payer: "Aetna",
-		category: "E0",
-		message: "Entity's tax ID is invalid or missing",
-	},
-	{
-		id: "277-ACK-003",
-		claimRef: "CLM-2024-8894",
-		patient: "Robert Wilson",
-		date: "2024-02-16",
-		time: "03:15 PM",
-		status: "Pending",
-		payer: "UnitedHealthcare",
-		category: "P2",
-		message: "Awaiting clinical documentation",
-	},
-];
+import { useAcknowledgments } from "@/hooks/useAcknowledgments";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
 	if (active && payload && payload.length) {
@@ -101,6 +58,70 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function EDI277CAView() {
+	const { data: acknowledgments, isLoading } = useAcknowledgments();
+
+	if (isLoading) {
+		return (
+			<div className="space-y-8 p-8">
+				<Skeleton className="h-20 w-full rounded-2xl" />
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<Skeleton className="h-32 rounded-3xl" />
+					<Skeleton className="h-32 rounded-3xl" />
+					<Skeleton className="h-32 rounded-3xl" />
+				</div>
+				<Skeleton className="h-[400px] w-full rounded-3xl" />
+			</div>
+		);
+	}
+
+	// Aggregate trend data from live acknowledgments
+	const trendMap = (acknowledgments || []).reduce((acc: any, curr: any) => {
+		const date = format(new Date(curr.acknowledgedAt), "MMM dd");
+		if (!acc[date]) {
+			acc[date] = { date, accepted: 0, rejected: 0 };
+		}
+		if (curr.acknowledgmentStatus === "accepted") {
+			acc[date].accepted += 1;
+		} else {
+			acc[date].rejected += 1;
+		}
+		return acc;
+	}, {});
+
+	const statusTrendData = Object.values(trendMap).sort((a: any, b: any) => 
+		new Date(a.date).getTime() - new Date(b.date).getTime()
+	);
+
+	const acceptedCount = acknowledgments?.filter((a: any) => a.acknowledgmentStatus === "accepted").length || 0;
+	const rejectedCount = acknowledgments?.filter((a: any) => a.acknowledgmentStatus === "rejected").length || 0;
+	const passRate = acknowledgments?.length ? ((acceptedCount / acknowledgments.length) * 100).toFixed(1) : "0.0";
+
+	const metrics = [
+		{
+			label: "Cycle Pass Rate",
+			value: `${passRate}%`,
+			desc: "Direct Payer Acknowledgment Rate",
+			icon: Activity,
+			color: "text-primary",
+			bg: "bg-primary/10",
+		},
+		{
+			label: "Payer Rejections",
+			value: rejectedCount.toString(),
+			desc: "Failed at front-end validation",
+			icon: AlertCircle,
+			color: "text-rose-500",
+			bg: "bg-rose-500/10",
+		},
+		{
+			label: "Total Stream",
+			value: acknowledgments?.length.toString() || "0",
+			desc: "Claims acknowledged by payer",
+			icon: FileText,
+			color: "text-emerald-500",
+			bg: "bg-emerald-500/10",
+		},
+	];
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			{/* Background Ambience */}
@@ -226,24 +247,7 @@ export function EDI277CAView() {
 
 				{/* Key Lifecycle Metrics */}
 				<div className="md:col-span-4 flex flex-col gap-6">
-					{[
-						{
-							label: "Cycle Pass Rate",
-							value: "94.2%",
-							desc: "Post-999 acceptance rate",
-							icon: Activity,
-							color: "text-primary",
-							bg: "bg-primary/10",
-						},
-						{
-							label: "Payer Rejections",
-							value: "12",
-							desc: "Failed at payer gateway",
-							icon: AlertCircle,
-							color: "text-rose-500",
-							bg: "bg-rose-500/10",
-						},
-					].map((metric, i) => (
+					{metrics.map((metric, i) => (
 						<Card
 							key={i}
 							className="flex-1 border-border/40 bg-card/80 backdrop-blur-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-[2.5rem] group hover:shadow-xl transition-all duration-500 overflow-hidden relative"
@@ -279,25 +283,25 @@ export function EDI277CAView() {
 				<DataTable
 					title="Acknowledgment Stream (277CA)"
 					subtitle="Claims Status Ledger • Direct Payer Feedback"
-					data={mock277Claims}
-					searchPlaceholder="Search Claim Ref or Patient..."
+					data={acknowledgments || []}
+					searchPlaceholder="Search Claim or Payer..."
 					onExport={() => console.log("Exporting 277CA...")}
 					columns={[
 						{
 							header: "Claim Identity",
-							key: "claimRef",
-							render: (claim: StatusClaim) => (
+							key: "submissionClaimNumber",
+							render: (ack: any) => (
 								<div className="flex items-center gap-4">
-									<div className="p-2.5 bg-primary/5 rounded-lg border border-primary/10">
+									<div className="group-hover:scale-110 p-2.5 bg-primary/5 rounded-lg border border-primary/10 transition-transform">
 										<FileText className="w-4 h-4 text-primary" />
 									</div>
 									<div>
 										<p className="text-[13px] font-black text-foreground">
-											{claim.claimRef}
+											{ack.submissionClaimNumber || "QUEUED"}
 										</p>
 										<div className="flex items-center gap-2 mt-0.5">
 											<span className="text-[9px] font-bold text-muted-foreground uppercase">
-												{claim.patient}
+												{ack.patientName || "System Processed"}
 											</span>
 										</div>
 									</div>
@@ -305,51 +309,49 @@ export function EDI277CAView() {
 							),
 						},
 						{
-							header: "Payer Context",
-							key: "payer",
-							render: (claim: StatusClaim) => (
+							header: "Payer Feedback",
+							key: "payerName",
+							render: (ack: any) => (
 								<div className="space-y-0.5">
 									<p className="text-[11px] font-black text-foreground tracking-tight uppercase">
-										{claim.payer}
+										{ack.payerName || "CLEARINGHOUSE ACK"}
 									</p>
 									<div className="flex items-center gap-2">
 										<Calendar className="w-3 h-3 text-muted-foreground opacity-60" />
 										<span className="text-[9px] font-bold text-muted-foreground uppercase">
-											{claim.date} • {claim.time}
+											{format(new Date(ack.acknowledgedAt), "MMM dd, yyyy • hh:mm a")}
 										</span>
 									</div>
 								</div>
 							),
 						},
 						{
-							header: "Status",
-							key: "status",
+							header: "Acknowledgment",
+							key: "acknowledgmentStatus",
 							align: "center",
-							render: (claim: StatusClaim) => (
+							render: (ack: any) => (
 								<Badge
 									className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest border-none ${
-										claim.status === "Accepted"
+										ack.acknowledgmentStatus === "accepted"
 											? "bg-emerald-500/10 text-emerald-600 shadow-none"
-											: claim.status === "Rejected"
-												? "bg-rose-500/10 text-rose-600 shadow-none"
-												: "bg-amber-500/10 text-amber-600 shadow-none"
+											: "bg-rose-500/10 text-rose-600 shadow-none"
 									}`}
 								>
-									{claim.status}
+									{ack.acknowledgmentStatus}
 								</Badge>
 							),
 						},
 						{
-							header: "Details",
-							key: "message",
-							render: (claim: StatusClaim) => (
+							header: "Expert Details",
+							key: "statusCode",
+							render: (ack: any) => (
 								<div className="flex flex-col gap-1">
 									<div className="flex items-center gap-2">
 										<Badge className="bg-primary/5 text-primary text-[8px] font-black px-1.5 py-0 border-primary/10">
-											{claim.category}
+											{ack.statusCategoryCode}:{ack.statusCode}
 										</Badge>
-										<span className="text-[10px] font-bold text-foreground/80">
-											{claim.message}
+										<span className="text-[10px] font-bold text-foreground/80 max-w-[200px] truncate">
+											{ack.payerClaimNumber ? `PCN: ${ack.payerClaimNumber}` : "Ack via STC Segment"}
 										</span>
 									</div>
 								</div>

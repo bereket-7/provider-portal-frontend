@@ -45,3 +45,32 @@ export async function getClaimStatusInquiries() {
 	}
 	return { success: false, message: res.message || "Failed to fetch claim status inquiries" };
 }
+
+export async function getClaimAcknowledgments() {
+	const query = `
+    query GetClaimAcknowledgments {
+      claimAcknowledgments {
+        id
+        acknowledgmentStatus
+        statusCategoryCode
+        statusCode
+        payerClaimNumber
+        clearinghouseTraceNumber
+        rawEdiContent
+        acknowledgedAt
+        submissionId
+        submissionEdiControlNumber
+        submissionClaimNumber
+        claimId
+        patientName
+        payerName
+      }
+    }
+  `;
+
+	const res = await graphqlRequest(query);
+	if (res.ok) {
+		return { success: true, data: res.data.claimAcknowledgments };
+	}
+	return { success: false, message: res.message || "Failed to fetch claim acknowledgments" };
+}
