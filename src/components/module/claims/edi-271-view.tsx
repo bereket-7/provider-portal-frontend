@@ -14,40 +14,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
+import { useEligibilityResponses } from "@/hooks/useEligibilityResponses";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const mock271Data = [
-	{
-		id: "ELI-271-001",
-		memberId: "MEM-88219",
-		name: "John Bekele",
-		date: "2024-02-18",
-		status: "Active",
-		payer: "National Health",
-		coverageType: "Full Benefits",
-	},
-	{
-		id: "ELI-271-002",
-		memberId: "MEM-99321",
-		name: "Sarah Chen",
-		date: "2024-02-18",
-		status: "Active",
-		payer: "Global Payer X",
-		coverageType: "Specialized Care",
-	},
-	{
-		id: "ELI-271-003",
-		memberId: "MEM-11203",
-		name: "Robert Smith",
-		date: "2024-02-17",
-		status: "Inactive",
-		payer: "Regional Insurance",
-		coverageType: "N/A",
-	},
-];
-
-type EligibilityResponse = (typeof mock271Data)[0];
+type EligibilityResponse = any;
 
 export function EDI271View() {
+	const { data: responses, isLoading } = useEligibilityResponses();
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			<div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
@@ -144,86 +117,101 @@ export function EDI271View() {
 			</div>
 
 			<div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-				<DataTable
-					title="Eligibility Audit Trail"
-					subtitle="Real-time registry of received EDI 271 benefit responses"
-					data={mock271Data}
-					columns={[
-						{
-							header: "Audit Reference",
-							key: "id",
-							render: (resp: EligibilityResponse) => (
-								<div className="flex items-center gap-4">
-									<div className="p-2.5 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
-										<ShieldCheck className="w-4 h-4 text-emerald-600" />
-									</div>
-									<div>
-										<p className="text-[13px] font-black text-foreground">
-											{resp.id}
-										</p>
-										<div className="flex items-center gap-2 mt-0.5">
-											<Calendar className="w-3 h-3 text-muted-foreground opacity-60" />
-											<span className="text-[9px] font-bold text-muted-foreground uppercase">
-												{resp.date}
-											</span>
+				{isLoading ? (
+					<div className="grid grid-cols-1 gap-4">
+						<Skeleton className="h-20 w-full rounded-2xl" />
+						<Skeleton className="h-60 w-full rounded-2xl" />
+					</div>
+				) : (
+					<DataTable
+						title="Eligibility Audit Trail"
+						subtitle="Real-time registry of received EDI 271 benefit responses"
+						data={responses || []}
+						columns={[
+							{
+								header: "Audit Reference",
+								key: "id",
+								render: (resp: any) => (
+									<div className="flex items-center gap-4">
+										<div className="p-2.5 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
+											<ShieldCheck className="w-4 h-4 text-emerald-600" />
+										</div>
+										<div>
+											<p className="text-[13px] font-black text-foreground">
+												{resp.id.split("-")[0]}...
+											</p>
+											<div className="flex items-center gap-2 mt-0.5">
+												<Calendar className="w-3 h-3 text-muted-foreground opacity-60" />
+												<span className="text-[9px] font-bold text-muted-foreground uppercase">
+													{new Date(resp.createdAt).toLocaleDateString()}
+												</span>
+											</div>
 										</div>
 									</div>
-								</div>
-							),
-						},
-						{
-							header: "Member Information",
-							key: "name",
-							render: (resp: EligibilityResponse) => (
-								<div className="space-y-0.5">
-									<p className="text-[11px] font-black text-foreground tracking-tight uppercase">
-										{resp.name}
-									</p>
-									<p className="text-[9px] font-bold text-muted-foreground opacity-60 uppercase">
-										ID: {resp.memberId}
-									</p>
-								</div>
-							),
-						},
-						{
-							header: "Payer Entity",
-							key: "payer",
-							className: "font-bold text-xs uppercase",
-						},
-						{
-							header: "Benefit Type",
-							key: "coverageType",
-							className:
-								"text-[10px] font-black uppercase text-muted-foreground tracking-widest",
-						},
-						{
-							header: "Status",
-							key: "status",
-							align: "right",
-							render: (resp: EligibilityResponse) => (
-								<Badge
-									className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest border-none ${
-										resp.status === "Active"
-											? "bg-emerald-500/10 text-emerald-600"
-											: "bg-rose-500/10 text-rose-600"
-									}`}
-								>
-									{resp.status}
-								</Badge>
-							),
-						},
-						{
-							header: "",
-							key: "action",
-							align: "right",
-							render: () => (
-								<button className="p-2 hover:bg-primary/5 rounded-lg transition-colors border border-transparent hover:border-border/40">
-									<ArrowUpRight className="w-4 h-4 text-muted-foreground" />
-								</button>
-							),
-						},
-					]}
-				/>
+								),
+							},
+							{
+								header: "Plan Details",
+								key: "planStatus",
+								render: (resp: any) => (
+									<div className="space-y-0.5">
+										<p className="text-[11px] font-black text-foreground tracking-tight uppercase">
+											{resp.planStatus || "Unknown Plan"}
+										</p>
+										<p className="text-[9px] font-bold text-muted-foreground opacity-60 uppercase">
+											X12 Status: {resp.eligibilityStatus}
+										</p>
+									</div>
+								),
+							},
+							{
+								header: "Control Number",
+								key: "id",
+								className: "font-bold text-xs uppercase",
+								render: (resp: any) => (
+									<span className="text-[10px] font-mono text-muted-foreground">
+										{resp.id.slice(-8).toUpperCase()}
+									</span>
+								),
+							},
+							{
+								header: "EDI Trace",
+								key: "rawEdiContent",
+								render: (resp: any) => (
+									<span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest truncate max-w-[150px] inline-block">
+										{resp.rawEdiContent?.slice(0, 30)}...
+									</span>
+								),
+							},
+							{
+								header: "Status",
+								key: "eligibilityStatus",
+								align: "right",
+								render: (resp: any) => (
+									<Badge
+										className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest border-none ${
+											resp.eligibilityStatus === "1"
+												? "bg-emerald-500/10 text-emerald-600"
+												: "bg-rose-500/10 text-rose-600"
+										}`}
+									>
+										{resp.eligibilityStatus === "1" ? "Active" : "Rejected"}
+									</Badge>
+								),
+							},
+							{
+								header: "",
+								key: "action",
+								align: "right",
+								render: () => (
+									<button className="p-2 hover:bg-primary/5 rounded-lg transition-colors border border-transparent hover:border-border/40">
+										<ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+									</button>
+								),
+							},
+						]}
+					/>
+				)}
 			</div>
 		</div>
 	);

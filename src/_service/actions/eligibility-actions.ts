@@ -26,3 +26,24 @@ export async function checkEligibility(input: {
 	}
 	return { success: false, message: res.message || "Failed to check eligibility" };
 }
+
+export async function getEligibilityResponses() {
+	const query = `
+    query GetEligibilityResponses {
+      eligibilityResponses {
+        id
+        eligibilityStatus
+        planStatus
+        details
+        rawEdiContent
+        createdAt
+      }
+    }
+  `;
+
+	const res = await graphqlRequest(query);
+	if (res.ok) {
+		return { success: true, data: res.data.eligibilityResponses };
+	}
+	return { success: false, message: res.message || "Failed to fetch eligibility responses" };
+}
