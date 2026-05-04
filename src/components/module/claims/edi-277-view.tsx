@@ -21,6 +21,37 @@ type StatusResponse = any;
 
 export function EDI277View() {
 	const { data: inquiries, isLoading } = useStatusInquiries();
+	const stats = [
+		{
+			title: "Total Responses",
+			value: inquiries?.length || 0,
+			trend: "All History",
+			icon: FileText,
+			color: "primary",
+		},
+		{
+			title: "Adjudicated/Final",
+			value: inquiries?.filter((inq: any) => inq.responseStatusCode === "Completed" || inq.responseStatusCategoryCode === "A1").length || 0,
+			trend: "Finalized",
+			icon: CheckCircle2,
+			color: "emerald",
+		},
+		{
+			title: "Pending Payer",
+			value: inquiries?.filter((inq: any) => !inq.responseStatusCode || inq.responseStatusCategoryCode === "A0").length || 0,
+			trend: "In Review",
+			icon: Clock,
+			color: "amber",
+		},
+		{
+			title: "Rejections",
+			value: inquiries?.filter((inq: any) => inq.responseStatusCode === "Rejected").length || 0,
+			trend: "Action Needed",
+			icon: AlertCircle,
+			color: "rose",
+		},
+	];
+
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			<div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
@@ -52,36 +83,7 @@ export function EDI277View() {
 			/>
 
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-				{[
-					{
-						title: "Total Responses",
-						value: "1,248",
-						trend: "+15% Volume",
-						icon: FileText,
-						color: "primary",
-					},
-					{
-						title: "Adjudicated",
-						value: "85%",
-						trend: "Finalized",
-						icon: CheckCircle2,
-						color: "emerald",
-					},
-					{
-						title: "Pending",
-						value: "142",
-						trend: "Reviewing",
-						icon: Clock,
-						color: "amber",
-					},
-					{
-						title: "Rejected",
-						value: "24",
-						trend: "Action Needed",
-						icon: AlertCircle,
-						color: "rose",
-					},
-				].map((stat, i) => (
+				{stats.map((stat, i) => (
 					<Card
 						key={i}
 						className="group relative overflow-hidden border-border/40 bg-card rounded-2xl transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)]"

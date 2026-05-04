@@ -17,16 +17,50 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useClaims } from "@/hooks/useClaims";
+import { useStatusInquiries } from "@/hooks/useStatusInquiries";
 import { checkClaimStatus } from "@/_service/actions/status-inquiry-actions";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { ArrowUpRight, Clock, FileText } from "lucide-react";
 
 export function EDI276View() {
+	const { data: inquiries } = useStatusInquiries();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [selectedClaimId, setSelectedClaimId] = useState("");
 	const [result, setResult] = useState<any>(null);
 
 	const { data: claims } = useClaims();
+
+	const stats = [
+		{
+			title: "Inquiries Sent",
+			value: inquiries?.length || 0,
+			trend: "All Time",
+			icon: Search,
+			color: "primary",
+		},
+		{
+			title: "Adjudicated/Final",
+			value: inquiries?.filter((inq: any) => inq.responseStatusCode === "Completed" || inq.responseStatusCategoryCode === "A1").length || 0,
+			trend: "Finalized",
+			icon: CheckCircle2,
+			color: "emerald",
+		},
+		{
+			title: "Pending Payer",
+			value: inquiries?.filter((inq: any) => !inq.responseStatusCode || inq.responseStatusCategoryCode === "A0").length || 0,
+			trend: "In Review",
+			icon: Clock,
+			color: "amber",
+		},
+		{
+			title: "Rejections",
+			value: inquiries?.filter((inq: any) => inq.responseStatusCode === "Rejected").length || 0,
+			trend: "Action Needed",
+			icon: AlertCircle,
+			color: "rose",
+		},
+	];
 
 	const handleStatusInquiry = async () => {
 		if (!selectedClaimId) {
@@ -68,6 +102,50 @@ export function EDI276View() {
 					</div>
 				}
 			/>
+
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+				{stats.map((stat, i) => (
+					<Card
+						key={i}
+						className="group relative overflow-hidden border-border/40 bg-card rounded-2xl transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)]"
+					>
+						<div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 blur-2xl transition-all" />
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 relative z-10">
+							<CardTitle className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
+								{stat.title}
+							</CardTitle>
+							<div
+								className={`p-2 ${stat.color === "primary" ? "bg-primary/10" : stat.color === "emerald" ? "bg-emerald-500/10" : stat.color === "amber" ? "bg-amber-500/10" : "bg-rose-500/10"} rounded-lg`}
+							>
+								<stat.icon
+									className={`w-3.5 h-3.5 ${stat.color === "primary" ? "text-primary" : stat.color === "emerald" ? "text-emerald-500" : stat.color === "amber" ? "text-amber-500" : "text-rose-500"} group-hover:scale-110 transition-transform`}
+								/>
+							</div>
+						</CardHeader>
+						<CardContent className="relative z-10">
+							<div className="text-2xl font-black text-foreground tabular-nums">
+								{stat.value}
+							</div>
+							<div className="mt-2 flex items-center justify-between">
+								<div
+									className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+										stat.color === "amber"
+											? "bg-amber-500/10 text-amber-500"
+											: stat.color === "rose"
+												? "bg-rose-500/10 text-rose-500"
+												: stat.color === "emerald"
+													? "bg-emerald-500/10 text-emerald-500"
+													: "bg-primary/10 text-primary"
+									}`}
+								>
+									{stat.trend}
+								</div>
+								<ArrowUpRight className="w-4 h-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+							</div>
+						</CardContent>
+					</Card>
+				))}
+			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 				<Card className="lg:col-span-8 border-border/40 bg-card/50 backdrop-blur-sm rounded-[2.5rem] overflow-hidden shadow-2xl">
