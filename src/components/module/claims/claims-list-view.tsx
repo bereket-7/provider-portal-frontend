@@ -18,14 +18,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { useClaims } from "@/hooks/useClaims";
+import { useClaimStats } from "@/hooks/useClaimStats";
 import { syncRemittances } from "@/_service/actions/claim-actions";
 import { toast } from "sonner";
 import { useState } from "react";
 
 export function ClaimsListView() {
 	const router = useRouter();
-	const { data: claims, isLoading, refetch } = useClaims();
+	const { data: claims, isLoading: isClaimsLoading, refetch } = useClaims();
+	const { data: stats, isLoading: isStatsLoading } = useClaimStats();
 	const [isSyncing, setIsSyncing] = useState(false);
+
+	const isLoading = isClaimsLoading || isStatsLoading;
 
 	if (isLoading) {
 		return (
@@ -51,6 +55,37 @@ export function ClaimsListView() {
 			setIsSyncing(false);
 		}
 	};
+
+	const statItems = [
+		{
+			title: "Total Submitted",
+			value: stats?.totalSubmitted?.toLocaleString() || "0",
+			trend: stats?.submittedTrend || "Live Data",
+			icon: FileText,
+			color: "primary",
+		},
+		{
+			title: "Pending Review",
+			value: stats?.pendingReview?.toLocaleString() || "0",
+			trend: stats?.pendingTrend || "High Priority",
+			icon: Clock,
+			color: "amber",
+		},
+		{
+			title: "Approved",
+			value: stats?.approved?.toLocaleString() || "0",
+			trend: stats?.approvedTrend || "94% Rate",
+			icon: CheckCircle2,
+			color: "emerald",
+		},
+		{
+			title: "Denied",
+			value: stats?.denied?.toLocaleString() || "0",
+			trend: stats?.deniedTrend || "Avoided",
+			icon: XCircle,
+			color: "rose",
+		},
+	];
 
 	return (
 		<div className="relative space-y-6 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
@@ -104,36 +139,7 @@ export function ClaimsListView() {
 
 			{/* Stats Grid */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-				{[
-					{
-						title: "Total Submitted",
-						value: "1,248",
-						trend: "+12%",
-						icon: FileText,
-						color: "primary",
-					},
-					{
-						title: "Pending Review",
-						value: "84",
-						trend: "High Priority",
-						icon: Clock,
-						color: "amber",
-					},
-					{
-						title: "Approved",
-						value: "1,120",
-						trend: "92% Rate",
-						icon: CheckCircle2,
-						color: "emerald",
-					},
-					{
-						title: "Denied",
-						value: "44",
-						trend: "-2% Avoided",
-						icon: XCircle,
-						color: "rose",
-					},
-				].map((stat, i) => (
+				{statItems.map((stat, i) => (
 					<Card
 						key={i}
 						className="group relative overflow-hidden border-border/40 bg-card rounded-2xl transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)]"

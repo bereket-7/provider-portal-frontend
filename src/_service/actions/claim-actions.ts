@@ -166,3 +166,22 @@ export async function syncRemittances() {
     }
 	return res.data?.pollRemittances || { success: false, message: "No data returned" };
 }
+
+export async function getClaimStats() {
+	const query = `
+    query GetClaimStats {
+      claimStats {
+        totalSubmitted
+        pendingReview
+        approved
+        denied
+        totalDraft
+        submittedTrend
+        pendingTrend
+        approvedTrend
+        deniedTrend
+      }
+    }
+  `;
+	return await graphqlRequest(query);
+}
