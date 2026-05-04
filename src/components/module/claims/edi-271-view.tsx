@@ -21,6 +21,33 @@ type EligibilityResponse = any;
 
 export function EDI271View() {
 	const { data: responses, isLoading } = useEligibilityResponses();
+	const stats = [
+		{
+			label: "Total Confirmed",
+			value: responses?.length || 0,
+			trend: "All Time",
+			icon: UserCheck,
+			color: "emerald",
+			bg: "bg-emerald-500/10",
+		},
+		{
+			label: "Active Coverage",
+			value: responses?.filter((r: any) => r.eligibilityStatus === "1").length || 0,
+			trend: "Verified Active",
+			icon: Zap,
+			color: "amber",
+			bg: "bg-amber-500/10",
+		},
+		{
+			label: "Success Rate",
+			value: responses?.length ? `${((responses.filter((r: any) => r.eligibilityStatus === "1").length / responses.length) * 100).toFixed(1)}%` : "0%",
+			trend: "X12 Validation",
+			icon: Activity,
+			color: "primary",
+			bg: "bg-primary/10",
+		},
+	];
+
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			<div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
@@ -52,32 +79,7 @@ export function EDI271View() {
 			/>
 
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-				{[
-					{
-						label: "Total Confirmed",
-						value: "342",
-						trend: "+5% Increase",
-						icon: UserCheck,
-						color: "emerald",
-						bg: "bg-emerald-500/10",
-					},
-					{
-						label: "Response Time",
-						value: "0.2s",
-						trend: "High Velocity",
-						icon: Zap,
-						color: "amber",
-						bg: "bg-amber-500/10",
-					},
-					{
-						label: "Validation Rate",
-						value: "99.8%",
-						trend: "99% Success",
-						icon: Activity,
-						color: "primary",
-						bg: "bg-primary/10",
-					},
-				].map((stat, i) => (
+				{stats.map((stat, i) => (
 					<Card
 						key={i}
 						className="group relative overflow-hidden border-border/40 bg-card rounded-2xl transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40_rgba(0,0,0,0.08)]"

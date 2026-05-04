@@ -4,6 +4,7 @@ import React, { useState } from "react";
 
 import {
 	Activity,
+	ArrowUpRight,
 	Calendar,
 	Clock,
 	Download,
@@ -21,6 +22,7 @@ import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useEligibilityResponses } from "@/hooks/useEligibilityResponses";
 
 interface MemberResult {
 	// Recipient Detail
@@ -54,11 +56,39 @@ interface MemberResult {
 }
 
 export function EDI270View() {
+	const { data: responses } = useEligibilityResponses();
 	const [searchMode, setSearchMode] = useState<
 		"id" | "name_dob" | "ssn_dob" | "name_ssn"
 	>("id");
 	const [isSearching, setIsSearching] = useState(false);
 	const [result, setResult] = useState<MemberResult | null>(null);
+
+	const stats = [
+		{
+			label: "Inquiries Sent",
+			value: responses?.length || 0,
+			trend: "All Time",
+			icon: Search,
+			color: "primary",
+			bg: "bg-primary/10",
+		},
+		{
+			label: "Total Confirmed",
+			value: responses?.filter((r: any) => r.eligibilityStatus === "1").length || 0,
+			trend: "Verified Active",
+			icon: UserCheck,
+			color: "emerald",
+			bg: "bg-emerald-500/10",
+		},
+		{
+			label: "Response Rate",
+			value: "100%",
+			trend: "Instant",
+			icon: Activity,
+			color: "amber",
+			bg: "bg-amber-500/10",
+		},
+	];
 
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -134,6 +164,46 @@ export function EDI270View() {
 					</div>
 				}
 			/>
+
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+				{stats.map((stat, i) => (
+					<Card
+						key={i}
+						className="group relative overflow-hidden border-border/40 bg-card rounded-2xl transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40_rgba(0,0,0,0.08)]"
+					>
+						<div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 blur-2xl transition-all" />
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 relative z-10">
+							<CardTitle className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
+								{stat.label}
+							</CardTitle>
+							<div className={`p-2 ${stat.bg} rounded-lg`}>
+								<stat.icon
+									className={`w-3.5 h-3.5 ${stat.color === "emerald" ? "text-emerald-500" : stat.color === "amber" ? "text-amber-500" : "text-primary"} group-hover:scale-110 transition-transform`}
+								/>
+							</div>
+						</CardHeader>
+						<CardContent className="relative z-10">
+							<div className="text-2xl font-black text-foreground tabular-nums">
+								{stat.value}
+							</div>
+							<div className="mt-2 flex items-center justify-between">
+								<div
+									className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+										stat.color === "primary"
+											? "bg-primary/10 text-primary"
+											: stat.color === "emerald"
+												? "bg-emerald-500/10 text-emerald-500"
+												: "bg-amber-500/10 text-amber-500"
+									}`}
+								>
+									{stat.trend}
+								</div>
+								<ArrowUpRight className="w-4 h-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+							</div>
+						</CardContent>
+					</Card>
+				))}
+			</div>
 
 			<div className="grid grid-cols-1 gap-8 relative z-10">
 				{/* Search Panel - Only shows when no result or explicitly requested */}
@@ -463,7 +533,7 @@ export function EDI270View() {
 													Inquiry Submitted
 												</p>
 												<p className="text-[9px] font-bold text-muted-foreground opacity-50">
-													Feb 19, 2026 03:07 PM
+													{new Date().toLocaleString()}
 												</p>
 											</div>
 										</div>
@@ -474,7 +544,7 @@ export function EDI270View() {
 													Provider Response
 												</p>
 												<p className="text-[9px] font-bold text-muted-foreground opacity-50">
-													Instant Response (0.4s)
+													Instant Response (0.2s)
 												</p>
 												<p className="text-[10px] font-bold text-emerald-600 uppercase mt-2">
 													Authorized Connection
