@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
 	AlertCircle,
 	ArrowUpRight,
@@ -17,11 +18,31 @@ import { PremiumButton } from "@/components/ui/custom/premium-button";
 import { useReconciliations, useReconciliationSummary } from "@/hooks/useReconciliations";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { syncRemittances } from "@/_service/actions/claim-actions";
+import { toast } from "sonner";
 
 export function EDI835View() {
 	const router = useRouter();
-	const { data: reconciliations, isLoading: isTableLoading } = useReconciliations();
+	const { data: reconciliations, isLoading: isTableLoading, refetch } = useReconciliations();
 	const { data: summary, isLoading: isSummaryLoading } = useReconciliationSummary();
+	const [isSyncing, setIsSyncing] = useState(false);
+
+	const handleSync = async () => {
+		setIsSyncing(true);
+		try {
+			const res = await syncRemittances();
+			if (res.success) {
+				toast.success(res.message);
+				refetch();
+			} else {
+				toast.error(res.message);
+			}
+		} catch (error) {
+			toast.error("Failed to sync remittances");
+		} finally {
+			setIsSyncing(false);
+		}
+	};
 
 	if (isTableLoading || isSummaryLoading) {
 		return (
@@ -69,6 +90,19 @@ export function EDI835View() {
 				actions={
 					<div className="flex items-center gap-3">
 						<div className="flex items-center gap-1">
+							<button 
+								onClick={handleSync}
+								disabled={isSyncing}
+								className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-xl text-xs font-black uppercase tracking-wider hover:bg-secondary/80 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+							>
+								{isSyncing ? (
+									<div className="h-3 w-3 animate-spin rounded-full border-b-2 border-current" />
+								) : (
+									<ArrowUpRight className="w-4 h-4" />
+								)}
+								Sync
+							</button>
+							<div className="h-4 w-px bg-border/40 hidden md:block mx-2" />
 							<button className="px-4 py-1.5 text-primary text-[10px] font-black uppercase tracking-wider relative">
 								Recent ERAs
 								<span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
@@ -180,7 +214,7 @@ export function EDI835View() {
 							header: "Amount",
 							key: "amount",
 							className: "font-black text-foreground tabular-nums",
-							render: (rec: any) => `$${parseFloat(rec.amount).toLocaleString()}`,
+							render: (rec: any) => `ETB ${parseFloat(rec.amount).toLocaleString()}`,
 						},
 						{
 							header: "Status",
