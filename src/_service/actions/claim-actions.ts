@@ -91,6 +91,9 @@ export async function getClaim(id: string) {
         totalCharges
         totalPaid
         totalAdjustments
+        submittedAt
+        adjudicatedAt
+        externalId
         ediStatus
         patient {
           id

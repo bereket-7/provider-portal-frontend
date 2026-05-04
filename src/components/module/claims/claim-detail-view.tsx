@@ -97,7 +97,7 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 						<div>
 							<div className="flex items-center gap-3">
 								<h1 className="text-2xl font-black tracking-tight text-foreground uppercase">
-									{claim.id}
+									{claim.claimNumber || claim.id}
 								</h1>
 								<Badge
 									className={`border-none text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${statusColors[claim.status]}`}
@@ -118,7 +118,7 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 								</p>
 								<div className="h-0.5 w-0.5 bg-border rounded-full" />
 								<p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-									Ref: {claim.referenceId}
+									Ref: {claim.externalId || "N/A"}
 								</p>
 							</div>
 						</div>
@@ -152,24 +152,24 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 							<p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-2">
 								Total Amount
 							</p>
-							<p className="text-xl font-black text-foreground">
-								${claim.amount}
+							<p className="text-xl font-black text-foreground tabular-nums">
+								ETB {parseFloat(claim.totalCharges || "0").toLocaleString()}
 							</p>
 						</Card>
 						<Card className="border border-border/40 bg-card/10 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all">
 							<p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-2">
 								Plan Paid
 							</p>
-							<p className="text-xl font-black text-emerald-600">
-								${claim.planPaid}
+							<p className="text-xl font-black text-emerald-600 tabular-nums">
+								ETB {parseFloat(claim.totalPaid || "0").toLocaleString()}
 							</p>
 						</Card>
 						<Card className="border border-border/40 bg-card/10 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] transition-all">
 							<p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-2">
 								Patient Resp.
 							</p>
-							<p className="text-xl font-black text-amber-600">
-								${claim.patientResp}
+							<p className="text-xl font-black text-amber-600 tabular-nums">
+								ETB {parseFloat(claim.totalAdjustments || "0").toLocaleString()}
 							</p>
 						</Card>
 					</div>
@@ -334,7 +334,7 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 											Claim Submitted
 										</p>
 										<p className="text-[9px] font-bold text-muted-foreground opacity-50 tabular-nums">
-											{claim.submittedAt}
+											{claim.submittedAt ? format(new Date(claim.submittedAt), "MMM dd, yyyy HH:mm") : "Pending"}
 										</p>
 									</div>
 								</div>
@@ -346,7 +346,7 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 											Adjudication Complete
 										</p>
 										<p className="text-[9px] font-bold text-muted-foreground opacity-50 tabular-nums">
-											{claim.adjudicatedAt}
+											{claim.adjudicatedAt ? format(new Date(claim.adjudicatedAt), "MMM dd, yyyy HH:mm") : "In Process"}
 										</p>
 										<p className="text-[10px] font-black text-emerald-600 uppercase mt-2">
 											Status: APPROVED
