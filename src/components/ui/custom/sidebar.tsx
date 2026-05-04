@@ -204,9 +204,6 @@ export default function Sidebar() {
 								<NavItem href="/new-claim" icon={FilePlus}>
 									New Claim
 								</NavItem>
-								<NavItem href="/resubmitted-claims" icon={RefreshCw}>
-									Resubmitted Claims
-								</NavItem>
 							</NavSection>
 
 							<NavSection title="Outbound (Provider → Payer)">
