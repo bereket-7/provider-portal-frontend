@@ -74,3 +74,36 @@ export async function getClaimAcknowledgments() {
 	}
 	return { success: false, message: res.message || "Failed to fetch claim acknowledgments" };
 }
+
+export async function getFunctionalAcknowledgments999() {
+	const query = `
+    query GetFunctionalAcknowledgments999 {
+      functionalAcknowledgments999 {
+        id
+        functionalGroupAckCode
+        functionalIdentifierCode
+        functionalGroupSyntaxErrorCode
+        transactionSetsIncluded
+        transactionSetsReceived
+        transactionSetsAccepted
+        interchangeControlNumber
+        functionalGroupControlNumber
+        errors
+        rawEdiContent
+        receivedAt
+        senderId
+        receiverId
+        isAccepted
+        isRejected
+        hasErrors
+        errorCount
+      }
+    }
+  `;
+
+	const res = await graphqlRequest(query);
+	if (res.ok) {
+		return { success: true, data: res.data.functionalAcknowledgments999 };
+	}
+	return { success: false, message: res.message || "Failed to fetch 999 functional acknowledgments" };
+}
