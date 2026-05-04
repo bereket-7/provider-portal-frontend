@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-
 import {
 	Activity,
 	Calendar,
@@ -13,14 +12,26 @@ import {
 	ShieldCheck,
 	User,
 	UserCheck,
+	AlertCircle,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePatients } from "@/hooks/usePatients";
+import { usePayers } from "@/hooks/usePayers";
+import { checkEligibility } from "@/_service/actions/eligibility-actions";
+import { toast } from "sonner";
 
 interface MemberResult {
 	// Recipient Detail
@@ -60,47 +71,66 @@ export function EligibilityInquiryView() {
 	const [isSearching, setIsSearching] = useState(false);
 	const [result, setResult] = useState<MemberResult | null>(null);
 
-	const handleSearch = (e: React.FormEvent) => {
+	const [selectedPatientId, setSelectedPatientId] = useState("");
+	const [selectedPayerId, setSelectedPayerId] = useState("");
+	const [serviceTypeCode, setServiceTypeCode] = useState("30");
+
+	const { data: patients } = usePatients();
+	const { data: payers } = usePayers();
+
+	const handleSearch = async (e: React.FormEvent) => {
 		e.preventDefault();
+		
+		if (!selectedPatientId || !selectedPayerId) {
+			toast.error("Please select both a patient and a payer");
+			return;
+		}
+
 		setIsSearching(true);
 
-		// Simulate API call using data inspired by the provided image
-		setTimeout(() => {
+		const res = await checkEligibility({
+			providerId: "e039cf14-05ef-4d49-b054-af407d4bd579", // Default provider
+			payerId: selectedPayerId,
+			patientId: selectedPatientId,
+			serviceTypeCode: serviceTypeCode,
+			dateOfService: new Date().toISOString().split('T')[0],
+		});
+
+		if (res.success) {
+			const patient = patients?.find((p: any) => p.id === selectedPatientId);
+			const payer = payers?.find((p: any) => p.id === selectedPayerId);
+
 			setResult({
-				id: "MEM-93821-44",
-				firstName: "ABRAHAM",
-				middleName: "K.",
-				lastName: "BEKELE",
-				dob: "12/12/1985",
-				gender: "Male",
+				id: patient?.id || res.data.id,
+				firstName: patient?.firstName || "Unknown",
+				lastName: patient?.lastName || "Unknown",
+				dob: patient?.birthDate || "N/A",
+				gender: patient?.gender || "N/A",
 				mailingAddress: {
-					street: "4528 BOLE DRIVE",
-					city: "ADDIS ABABA, AA 1000",
-					ward: "01/NW",
+					street: "Primary Medical Record Address",
+					city: "Verified",
+					ward: "Default",
 				},
 				residentialAddress: {
-					street: "4528 BOLE DRIVE",
-					city: "ADDIS ABABA, AA 1000",
-					ward: "01/NW",
+					street: "Primary Medical Record Address",
+					city: "Verified",
+					ward: "Default",
 				},
-				recertDate: "09/30/2026",
-				planCoverage: "MEDICAID MANAGED CARE - GOLD",
-				programCode: "7582",
-				status: "Active",
-				coverageStart: "11/01/2021",
-				coverageEnd: "09/30/2026",
+				recertDate: res.data.createdAt,
+				planCoverage: `PLAN: ${payer?.name || "PAYER"}`,
+				programCode: res.data.eligibilityStatus,
+				status: res.data.planStatus === "Active" ? "Active" : "Inactive",
+				coverageStart: "Verified Active",
+				coverageEnd: "Ongoing",
 				qmbIndicator: "NO",
-				caseNumber: "392812399",
-				serviceTypes: [
-					"Physician Services",
-					"Hospital Services",
-					"Pharmacy / Drug Benefits",
-					"Diagnostic Imaging",
-					"Laboratory and Radiology",
-				],
+				caseNumber: res.data.id.substring(0, 8),
+				serviceTypes: Object.values(res.data.details || {}),
 			});
-			setIsSearching(false);
-		}, 1000);
+			toast.success("Eligibility check successful");
+		} else {
+			toast.error(res.message || "Eligibility check failed");
+		}
+		setIsSearching(false);
 	};
 
 	return (
@@ -169,89 +199,57 @@ export function EligibilityInquiryView() {
 
 							<form onSubmit={handleSearch} className="space-y-8">
 								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-									{searchMode === "id" && (
-										<div className="space-y-2">
-											<Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1">
-												Recipient ID
-											</Label>
-											<Input
-												placeholder="Enter ID"
-												className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40 placeholder:opacity-30"
-												required
-											/>
-										</div>
-									)}
-
-									{(searchMode === "name_dob" || searchMode === "name_ssn") && (
-										<>
-											<div className="space-y-2">
-												<Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1">
-													First Name
-												</Label>
-												<Input
-													placeholder="John"
-													className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40 placeholder:opacity-30"
-													required
-												/>
-											</div>
-											<div className="space-y-2">
-												<Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1">
-													Last Name
-												</Label>
-												<Input
-													placeholder="Doe"
-													className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40 placeholder:opacity-30"
-													required
-												/>
-											</div>
-										</>
-									)}
-
-									{(searchMode === "ssn_dob" || searchMode === "name_ssn") && (
-										<div className="space-y-2">
-											<Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1">
-												SSN
-											</Label>
-											<Input
-												placeholder="000-00-0000"
-												className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40 placeholder:opacity-30"
-												required
-											/>
-										</div>
-									)}
-
-									{(searchMode === "name_dob" || searchMode === "ssn_dob") && (
-										<div className="space-y-2">
-											<Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1">
-												Date of Birth
-											</Label>
-											<Input
-												type="date"
-												className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40"
-												required
-											/>
-										</div>
-									)}
-
 									<div className="space-y-2">
 										<Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1">
-											Begin Date of Service
+											Select Patient
 										</Label>
-										<Input
-											type="date"
-											className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40"
-											required
-										/>
+										<Select onValueChange={setSelectedPatientId} value={selectedPatientId}>
+											<SelectTrigger className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm">
+												<SelectValue placeholder="Select a patient" />
+											</SelectTrigger>
+											<SelectContent>
+												{patients?.map((p: any) => (
+													<SelectItem key={p.id} value={p.id}>
+														{p.firstName} {p.lastName}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
 									</div>
+
 									<div className="space-y-2">
 										<Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1">
-											End Date of Service
+											Select Payer
 										</Label>
-										<Input
-											type="date"
-											className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40"
-											required
-										/>
+										<Select onValueChange={setSelectedPayerId} value={selectedPayerId}>
+											<SelectTrigger className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm">
+												<SelectValue placeholder="Select a payer" />
+											</SelectTrigger>
+											<SelectContent>
+												{payers?.map((p: any) => (
+													<SelectItem key={p.id} value={p.id}>
+														{p.name} ({p.payerCode})
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+
+									<div className="space-y-2">
+										<Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 ml-1">
+											Service Type
+										</Label>
+										<Select onValueChange={setServiceTypeCode} value={serviceTypeCode}>
+											<SelectTrigger className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm">
+												<SelectValue placeholder="Select service type" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="30">Health Benefit Plan Coverage (30)</SelectItem>
+												<SelectItem value="1">Medical Care (1)</SelectItem>
+												<SelectItem value="35">Dental Care (35)</SelectItem>
+												<SelectItem value="UC">Urgent Care (UC)</SelectItem>
+											</SelectContent>
+										</Select>
 									</div>
 								</div>
 
