@@ -14,21 +14,50 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
-import { useReconciliations } from "@/hooks/useReconciliations";
+import { useReconciliations, useReconciliationSummary } from "@/hooks/useReconciliations";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 
 export function EDI835View() {
 	const router = useRouter();
-	const { data: reconciliations, isLoading } = useReconciliations();
+	const { data: reconciliations, isLoading: isTableLoading } = useReconciliations();
+	const { data: summary, isLoading: isSummaryLoading } = useReconciliationSummary();
 
-	if (isLoading) {
+	if (isTableLoading || isSummaryLoading) {
 		return (
 			<div className="flex items-center justify-center min-h-[400px]">
 				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
 			</div>
 		);
 	}
+
+	const stats = [
+		{
+			label: "Total Paid",
+			value: `ETB ${parseFloat(summary?.totalPaid || "0").toLocaleString()}`,
+			trend: `${summary?.matchedClaims || 0} Matched`,
+			icon: DollarSign,
+			color: "emerald",
+			bg: "bg-emerald-500/10",
+		},
+		{
+			label: "Pending Review",
+			value: summary?.claimsRequiringReview || 0,
+			trend: "Requires Action",
+			icon: Clock,
+			color: "amber",
+			bg: "bg-amber-500/10",
+		},
+		{
+			label: "Variance Rate",
+			value: `${parseFloat(summary?.variancePercentage || "0").toFixed(1)}%`,
+			trend: `ETB ${parseFloat(summary?.totalVariance || "0").toLocaleString()}`,
+			icon: AlertCircle,
+			color: "rose",
+			bg: "bg-rose-500/10",
+		},
+	];
+
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			<div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
@@ -60,32 +89,7 @@ export function EDI835View() {
 			/>
 
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-				{[
-					{
-						label: "Total Paid",
-						value: "$48,450.00",
-						trend: "+12% Growth",
-						icon: DollarSign,
-						color: "emerald",
-						bg: "bg-emerald-500/10",
-					},
-					{
-						label: "Pending ERA",
-						value: "12",
-						trend: "High Priority",
-						icon: Clock,
-						color: "amber",
-						bg: "bg-amber-500/10",
-					},
-					{
-						label: "Avg Reduction",
-						value: "14%",
-						trend: "-2% Efficiency",
-						icon: AlertCircle,
-						color: "rose",
-						bg: "bg-rose-500/10",
-					},
-				].map((stat, i) => (
+				{stats.map((stat, i) => (
 					<Card
 						key={i}
 						className="group relative overflow-hidden border-border/40 bg-card rounded-2xl transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)]"

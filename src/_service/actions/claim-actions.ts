@@ -136,6 +136,19 @@ export async function submitClaimToInsurance(id: string) {
 	return await graphqlRequest(mutation, { id });
 }
 
+export async function submitClaimsBatch(ids: string[]) {
+	const mutation = `
+    mutation SubmitClaimsBatch($ids: [String!]!) {
+      submitClaimsBatch(ids: $ids) {
+        success
+        message
+      }
+    }
+  `;
+
+	return await graphqlRequest(mutation, { ids });
+}
+
 export async function syncRemittances() {
 	const mutation = `
     mutation SyncRemittances {
