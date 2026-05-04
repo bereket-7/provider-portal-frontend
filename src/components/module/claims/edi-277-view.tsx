@@ -14,37 +14,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
+import { useStatusInquiries } from "@/hooks/useStatusInquiries";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const mock277Data = [
-	{
-		id: "RESP-277-001",
-		claimId: "CLM-9382",
-		date: "2024-02-18",
-		status: "Pending/Payer",
-		detail: "Standard processing queue",
-		payer: "BlueCross BlueShield",
-	},
-	{
-		id: "RESP-277-002",
-		claimId: "CLM-9401",
-		date: "2024-02-17",
-		status: "Approved",
-		detail: "Finalized for payment check #CHK-001",
-		payer: "Aetna Healthcare",
-	},
-	{
-		id: "RESP-277-003",
-		claimId: "CLM-8832",
-		date: "2024-02-17",
-		status: "Rejected",
-		detail: "Missing Loop 2310B NPI",
-		payer: "UnitedHealth Group",
-	},
-];
-
-type StatusResponse = (typeof mock277Data)[0];
+type StatusResponse = any;
 
 export function EDI277View() {
+	const { data: inquiries, isLoading } = useStatusInquiries();
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			<div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
@@ -149,76 +125,99 @@ export function EDI277View() {
 			</div>
 
 			<div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-				<DataTable
-					title="Status Response Log"
-					subtitle="Real-time transaction history for HIPAA 277 responses"
-					data={mock277Data}
-					columns={[
-						{
-							header: "Response ID",
-							key: "id",
-							render: (resp: StatusResponse) => (
-								<div className="flex items-center gap-4">
-									<div className="p-2.5 bg-primary/5 rounded-lg">
-										<Activity className="w-4 h-4 text-primary" />
+				{isLoading ? (
+					<div className="grid grid-cols-1 gap-4">
+						<Skeleton className="h-20 w-full rounded-2xl" />
+						<Skeleton className="h-60 w-full rounded-2xl" />
+					</div>
+				) : (
+					<DataTable
+						title="Status Response Log"
+						subtitle="Real-time transaction history for HIPAA 277 responses"
+						data={inquiries || []}
+						columns={[
+							{
+								header: "Response ID",
+								key: "id",
+								render: (resp: any) => (
+									<div className="flex items-center gap-4">
+										<div className="p-2.5 bg-primary/5 rounded-lg">
+											<Activity className="w-4 h-4 text-primary" />
+										</div>
+										<div>
+											<p className="text-[13px] font-black text-foreground uppercase tracking-tight">
+												{resp.id.split("-")[0]}
+											</p>
+											<p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">
+												Ctrl #: {resp.ediControlNumber}
+											</p>
+										</div>
 									</div>
-									<div>
-										<p className="text-[13px] font-black text-foreground uppercase tracking-tight">
-											{resp.id}
+								),
+							},
+							{
+								header: "Dates",
+								key: "requestDate",
+								render: (resp: any) => (
+									<div className="space-y-0.5">
+										<p className="text-[10px] font-black text-foreground tracking-tight">
+											REQ: {new Date(resp.requestDate).toLocaleDateString()}
 										</p>
-										<p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">
-											Ref Claim: {resp.claimId}
-										</p>
+										{resp.responseDate && (
+											<p className="text-[9px] font-bold text-emerald-600 uppercase opacity-80">
+												RES: {new Date(resp.responseDate).toLocaleDateString()}
+											</p>
+										)}
 									</div>
-								</div>
-							),
-						},
-						{
-							header: "Payer",
-							key: "payer",
-							className: "font-bold text-sm",
-						},
-						{
-							header: "Date",
-							key: "date",
-							className: "text-xs text-muted-foreground whitespace-nowrap",
-						},
-						{
-							header: "Status Detail",
-							key: "detail",
-							className:
-								"text-[11px] font-medium text-muted-foreground max-w-[250px]",
-						},
-						{
-							header: "Current Status",
-							key: "status",
-							align: "right",
-							render: (resp: StatusResponse) => (
-								<Badge
-									className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest border-none ${
-										resp.status === "Approved"
-											? "bg-emerald-500/10 text-emerald-600"
-											: resp.status === "Rejected"
-												? "bg-rose-500/10 text-rose-600"
-												: "bg-amber-500/10 text-amber-600"
-									}`}
-								>
-									{resp.status}
-								</Badge>
-							),
-						},
-						{
-							header: "",
-							key: "action",
-							align: "right",
-							render: () => (
-								<button className="p-2 hover:bg-primary/5 rounded-lg transition-colors border border-transparent hover:border-border/40">
-									<ArrowUpRight className="w-4 h-4 text-muted-foreground" />
-								</button>
-							),
-						},
-					]}
-				/>
+								),
+							},
+							{
+								header: "Category",
+								key: "responseStatusCategoryCode",
+								className: "text-xs font-black text-muted-foreground",
+								render: (resp: any) => (
+									<span>{resp.responseStatusCategoryCode || "PENDING"}</span>
+								),
+							},
+							{
+								header: "Status Detail",
+								key: "responseStatusCode",
+								className: "text-[11px] font-medium text-muted-foreground max-w-[250px]",
+								render: (resp: any) => (
+									<span>{resp.responseStatusCode || "No details available"}</span>
+								),
+							},
+							{
+								header: "Current Status",
+								key: "responseStatusCode",
+								align: "right",
+								render: (resp: any) => (
+									<Badge
+										className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest border-none ${
+											resp.responseStatusCode === "Approved" || resp.responseStatusCategoryCode === "A1"
+												? "bg-emerald-500/10 text-emerald-600"
+												: resp.responseStatusCode === "Rejected"
+													? "bg-rose-500/10 text-rose-600"
+													: "bg-amber-500/10 text-amber-600"
+										}`}
+									>
+										{resp.responseStatusCode || "Pending"}
+									</Badge>
+								),
+							},
+							{
+								header: "",
+								key: "action",
+								align: "right",
+								render: () => (
+									<button className="p-2 hover:bg-primary/5 rounded-lg transition-colors border border-transparent hover:border-border/40">
+										<ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+									</button>
+								),
+							},
+						]}
+					/>
+				)}
 			</div>
 		</div>
 	);
