@@ -9,6 +9,7 @@ import {
 	Building2,
 	Calendar,
 	FileText,
+	Loader2,
 	Scale,
 	ShieldCheck,
 	Upload,
@@ -16,7 +17,9 @@ import {
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useRouter } from "next/navigation";
 
+import { useCreateDispute } from "@/hooks/useCreateDispute";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -76,6 +79,9 @@ const disputeSchema = z.z.object({
 type DisputeFormValues = z.infer<typeof disputeSchema>;
 
 export function NewDisputeView() {
+	const router = useRouter();
+	const createDispute = useCreateDispute();
+
 	const form = useForm<DisputeFormValues>({
 		resolver: zodResolver(disputeSchema),
 		defaultValues: {
@@ -99,8 +105,14 @@ export function NewDisputeView() {
 		},
 	});
 
-	function onSubmit(data: DisputeFormValues) {
-		console.log("Form submitted:", data);
+	async function onSubmit(data: DisputeFormValues) {
+		try {
+			await createDispute.mutateAsync(data);
+			router.push("/disputes");
+		} catch (error) {
+			console.error("Submission failed", error);
+			alert("Failed to submit dispute. Check console for details.");
+		}
 	}
 
 	const inputClasses =
@@ -596,8 +608,19 @@ export function NewDisputeView() {
 						>
 							Save as Draft
 						</Button>
-						<Button className="px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase text-[10px] tracking-widest h-12 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-							Submit Dispute Form
+						<Button 
+							type="submit" 
+							disabled={createDispute.isPending}
+							className="px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase text-[10px] tracking-widest h-12 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+						>
+							{createDispute.isPending ? (
+								<>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									Submitting...
+								</>
+							) : (
+								"Submit Dispute Form"
+							)}
 						</Button>
 					</div>
 				</form>
