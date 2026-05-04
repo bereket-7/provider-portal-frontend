@@ -25,6 +25,11 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
+import { useClaimStats } from "@/hooks/useClaimStats";
+import { useReconciliationSummary } from "@/hooks/useReconciliations";
+import { usePriorAuthorizations } from "@/hooks/usePriorAuthorizations";
+import { useMembers } from "@/hooks/useMembers";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const claimsData = [
 	{ month: "Jan", submitted: 45, approved: 42, pending: 3, rejected: 2 },
@@ -77,6 +82,22 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function DashboardPage() {
+	const { data: claimStats, isLoading: isClaimStatsLoading } = useClaimStats();
+	const { data: reconciliationSummary, isLoading: isReconLoading } = useReconciliationSummary();
+	const { data: authRequests, isLoading: isAuthLoading } = usePriorAuthorizations();
+	const { data: members, isLoading: isMembersLoading } = useMembers();
+
+	const isLoading = isClaimStatsLoading || isReconLoading || isAuthLoading || isMembersLoading;
+
+	const formatRevenue = (value: string | undefined) => {
+		const num = parseFloat(value || "0");
+		if (num >= 1000000) return `ETB ${(num / 1000000).toFixed(1)}M`;
+		if (num >= 1000) return `ETB ${(num / 1000).toFixed(1)}K`;
+		return `ETB ${num.toLocaleString()}`;
+	};
+
+	const pendingAuths = authRequests?.filter((a: any) => a.status === "PENDING" || a.status === "NEW").length || 0;
+
 	return (
 		<div className="relative space-y-6 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			{/* Sleek Background Elements */}
@@ -117,64 +138,79 @@ export default function DashboardPage() {
 
 			{/* Stats Grid */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-				{[
-					{
-						title: "Total Claims",
-						value: "1,248",
-						trend: "+12%",
-						icon: FileText,
-						color: "primary",
-					},
-					{
-						title: "Revenue",
-						value: "$2.4M",
-						trend: "+8%",
-						icon: DollarSign,
-						color: "primary",
-					},
-					{
-						title: "Auth. Requests",
-						value: "892",
-						trend: "23 Pending",
-						icon: CheckCircle2,
-						color: "amber",
-					},
-					{
-						title: "Active Members",
-						value: "3,421",
-						trend: "+3%",
-						icon: Users,
-						color: "primary",
-					},
-				].map((stat, i) => (
-					<Card
-						key={i}
-						className="group relative overflow-hidden border-border/40 bg-white rounded-2xl transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)]"
-					>
-						<div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/10 transition-all" />
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 relative z-10">
-							<CardTitle className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
-								{stat.title}
-							</CardTitle>
-							<div className="p-2 bg-primary/10 rounded-lg">
-								<stat.icon className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
-							</div>
-						</CardHeader>
-						<CardContent className="relative z-10">
-							<div className="text-2xl font-black text-foreground tabular-nums">
-								{stat.value}
-							</div>
-							<div className="mt-2 flex items-center justify-between">
-								<div
-									className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${stat.trend.includes("Pending") ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}`}
-								>
-									{stat.trend}
+				{isLoading ? (
+					Array.from({ length: 4 }).map((_, i) => (
+						<Card key={i} className="border-border/40 bg-white rounded-2xl h-32">
+							<CardHeader className="flex flex-row items-center justify-between pb-1">
+								<Skeleton className="h-3 w-20" />
+								<Skeleton className="h-8 w-8 rounded-lg" />
+							</CardHeader>
+							<CardContent>
+								<Skeleton className="h-8 w-24 mb-2" />
+								<Skeleton className="h-4 w-32 rounded-full" />
+							</CardContent>
+						</Card>
+					))
+				) : (
+					[
+						{
+							title: "Total Claims",
+							value: claimStats?.totalSubmitted?.toLocaleString() || "0",
+							trend: claimStats?.submittedTrend || "+0%",
+							icon: FileText,
+							color: "primary",
+						},
+						{
+							title: "Revenue",
+							value: formatRevenue(reconciliationSummary?.totalPaid),
+							trend: "Payment Summary",
+							icon: DollarSign,
+							color: "primary",
+						},
+						{
+							title: "Auth. Requests",
+							value: authRequests?.length?.toLocaleString() || "0",
+							trend: `${pendingAuths} Pending`,
+							icon: CheckCircle2,
+							color: "amber",
+						},
+						{
+							title: "Active Members",
+							value: members?.length?.toLocaleString() || "0",
+							trend: "Live Policyholders",
+							icon: Users,
+							color: "primary",
+						},
+					].map((stat, i) => (
+						<Card
+							key={i}
+							className="group relative overflow-hidden border-border/40 bg-white rounded-2xl transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_10px_30px_-10px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)]"
+						>
+							<div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/10 transition-all" />
+							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 relative z-10">
+								<CardTitle className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
+									{stat.title}
+								</CardTitle>
+								<div className="p-2 bg-primary/10 rounded-lg">
+									<stat.icon className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
 								</div>
-								<ArrowUpRight className="w-4 h-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
-							</div>
-						</CardContent>
-					</Card>
-				))}
+							</CardHeader>
+							<CardContent className="relative z-10">
+								<div className="text-2xl font-black text-foreground tabular-nums">
+									{stat.value}
+								</div>
+								<div className="mt-2 flex items-center justify-between">
+									<div
+										className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${stat.trend.includes("Pending") ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}`}
+									>
+										{stat.trend}
+									</div>
+									<ArrowUpRight className="w-4 h-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+								</div>
+							</CardContent>
+						</Card>
+					))
+				)}
 			</div>
 
 			{/* Main Content Area */}
