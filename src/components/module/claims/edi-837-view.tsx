@@ -19,7 +19,10 @@ import { submitClaimsBatch } from "@/_service/actions/claim-actions";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+import { useRouter } from "next/navigation";
+
 export function EDI837View() {
+	const router = useRouter();
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const { data: claims, isLoading, refetch } = useClaims(undefined, "draft");
@@ -140,6 +143,7 @@ export function EDI837View() {
 					title="Claims Ready for Submission"
 					subtitle="Select claims to generate and transmit 837 EDI files"
 					data={claims || []}
+					onRowClick={(claim: any) => router.push(`/claims/${claim.id}`)}
 					columns={[
 						{
 							header: "Select",
@@ -222,7 +226,10 @@ export function EDI837View() {
 							key: "action",
 							align: "right",
 							render: (claim: any) => (
-								<button className="p-2 hover:bg-primary/5 rounded-lg transition-colors border border-transparent hover:border-border/40">
+								<button 
+									onClick={() => router.push(`/claims/${claim.id}`)}
+									className="p-2 hover:bg-primary/5 rounded-lg transition-colors border border-transparent hover:border-border/40"
+								>
 									<ArrowUpRight className="w-4 h-4 text-muted-foreground" />
 								</button>
 							),
