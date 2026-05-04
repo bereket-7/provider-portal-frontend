@@ -93,7 +93,7 @@ export function EDI835View() {
 							<button 
 								onClick={handleSync}
 								disabled={isSyncing}
-								className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-xl text-xs font-black uppercase tracking-wider hover:bg-secondary/80 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+								className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
 							>
 								{isSyncing ? (
 									<div className="h-3 w-3 animate-spin rounded-full border-b-2 border-current" />
