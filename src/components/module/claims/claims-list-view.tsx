@@ -19,15 +19,42 @@ import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { useClaims } from "@/hooks/useClaims";
 import { useClaimStats } from "@/hooks/useClaimStats";
+import { usePayers } from "@/hooks/usePayers";
 import { syncRemittances } from "@/_service/actions/claim-actions";
+import { demoSyncRemittances } from "@/lib/demo/demo-api";
+import { isDemoMode } from "@/lib/demo/demo-mode";
+import { useDemoStore } from "@/lib/demo/demo-store-context";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export function ClaimsListView() {
 	const router = useRouter();
+	const { bumpVersion } = useDemoStore();
 	const { data: claims, isLoading: isClaimsLoading, refetch } = useClaims();
+	const { data: payers } = usePayers();
 	const { data: stats, isLoading: isStatsLoading } = useClaimStats();
 	const [isSyncing, setIsSyncing] = useState(false);
+	const [statusFilter, setStatusFilter] = useState<string>("all");
+	const [payerFilter, setPayerFilter] = useState<string>("all");
+	const [dateFrom, setDateFrom] = useState("");
+	const [dateTo, setDateTo] = useState("");
+
+	const filteredClaims = useMemo(() => {
+		let list = (claims || []).filter(
+			(c: any) => !["DRAFT", "draft"].includes(c.status)
+		);
+		if (statusFilter !== "all") {
+			list = list.filter(
+				(c: any) => c.status?.toUpperCase() === statusFilter.toUpperCase()
+			);
+		}
+		if (payerFilter !== "all") {
+			list = list.filter((c: any) => c.payerId === payerFilter);
+		}
+		if (dateFrom) list = list.filter((c: any) => c.serviceFrom >= dateFrom);
+		if (dateTo) list = list.filter((c: any) => c.serviceTo <= dateTo);
+		return list;
+	}, [claims, statusFilter, payerFilter, dateFrom, dateTo]);
 
 	const isLoading = isClaimsLoading || isStatsLoading;
 
@@ -42,14 +69,17 @@ export function ClaimsListView() {
 	const handleSync = async () => {
 		setIsSyncing(true);
 		try {
-			const res = await syncRemittances();
+			const res = isDemoMode()
+				? await demoSyncRemittances()
+				: await syncRemittances();
 			if (res.success) {
 				toast.success(res.message);
-				refetch(); // Refresh the claims list
+				if (isDemoMode()) bumpVersion();
+				refetch();
 			} else {
-				toast.error(res.message);
+				toast.error((res as { message?: string }).message);
 			}
-		} catch (error) {
+		} catch {
 			toast.error("Failed to sync remittances");
 		} finally {
 			setIsSyncing(false);
@@ -97,7 +127,7 @@ export function ClaimsListView() {
 			<ModuleHeader
 				icon={FileText}
 				title="Claims Management"
-				subtitle="Live Processing • Tena'adam Team"
+				subtitle="Live Processing • Provider Network Team"
 				actions={
 					<div className="flex items-center gap-3">
 						<div className="flex items-center gap-2">
@@ -176,11 +206,50 @@ export function ClaimsListView() {
 				))}
 			</div>
 
+			<div className="flex flex-wrap gap-3 p-4 rounded-2xl border border-border/40 bg-card/50">
+				<select
+					value={statusFilter}
+					onChange={(e) => setStatusFilter(e.target.value)}
+					className="h-10 px-3 rounded-xl border border-border/40 text-sm font-bold"
+				>
+					<option value="all">All Statuses</option>
+					<option value="SUBMITTED">Submitted</option>
+					<option value="PENDING">Pending</option>
+					<option value="APPROVED">Approved</option>
+					<option value="REJECTED">Rejected</option>
+					<option value="PAID">Paid</option>
+				</select>
+				<select
+					value={payerFilter}
+					onChange={(e) => setPayerFilter(e.target.value)}
+					className="h-10 px-3 rounded-xl border border-border/40 text-sm font-bold min-w-[180px]"
+				>
+					<option value="all">All Insurers</option>
+					{(payers || []).map((p: any) => (
+						<option key={p.id} value={p.id}>
+							{p.name}
+						</option>
+					))}
+				</select>
+				<input
+					type="date"
+					value={dateFrom}
+					onChange={(e) => setDateFrom(e.target.value)}
+					className="h-10 px-3 rounded-xl border border-border/40 text-sm"
+				/>
+				<input
+					type="date"
+					value={dateTo}
+					onChange={(e) => setDateTo(e.target.value)}
+					className="h-10 px-3 rounded-xl border border-border/40 text-sm"
+				/>
+			</div>
+
 			<div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
 				<DataTable
 					title="Claims Ledger"
 					subtitle="Live processing registry • Professional & Institutional"
-					data={claims || []}
+					data={filteredClaims}
 					onRowClick={(claim: any) => router.push(`/claims/${claim.id}`)}
 					onExport={() => console.log("Exporting claims...")}
 					columns={[

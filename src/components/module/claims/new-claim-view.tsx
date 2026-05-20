@@ -25,6 +25,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
 import { createComprehensiveClaim } from "@/_service/actions/claim-actions";
+import { demoCreateClaim } from "@/lib/demo/demo-api";
+import { isDemoMode } from "@/lib/demo/demo-mode";
+import { useDemoStore } from "@/lib/demo/demo-store-context";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { usePatients } from "@/hooks/usePatients";
@@ -34,6 +37,7 @@ import { SearchableSelect } from "@/components/ui/custom/searchable-select";
 
 const claimSchema = z.object({
 	patientName: z.string().min(1, "Patient name is required"),
+	mrn: z.string().min(1, "MRN is required"),
 	memberId: z.string().min(1, "Member ID is required"),
 	dob: z.string().min(1, "Date of birth is required"),
 	subscriberId: z.string().min(1, "Subscriber ID/Policy number is required"),
@@ -72,7 +76,9 @@ type ClaimFormValues = z.infer<typeof claimSchema>;
 export function NewClaimView() {
 	const [step, setStep] = useState(1);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
 	const router = useRouter();
+	const { bumpVersion } = useDemoStore();
 	const [patientSearch, setPatientSearch] = useState("");
 	const [memberSearch, setMemberSearch] = useState("");
 	const [payerSearch, setPayerSearch] = useState("");
@@ -85,6 +91,7 @@ export function NewClaimView() {
 		resolver: zodResolver(claimSchema),
 		defaultValues: {
 			patientName: "",
+			mrn: "",
 			memberId: "",
 			dob: "",
 			subscriberId: "",
@@ -126,12 +133,86 @@ export function NewClaimView() {
 		name: "diagnoses",
 	});
 
+	const buildClaimPayload = (values: ClaimFormValues, status: string) => {
+		const totalCharges = values.lines
+			.reduce((acc, curr) => acc + parseFloat(curr.billedAmount || "0"), 0)
+			.toFixed(2);
+		return {
+			claimData: {
+				serviceFrom: values.serviceFrom,
+				serviceTo: values.serviceTo,
+				billingNpi: values.billingNpi,
+				totalCharges,
+				status: status as "DRAFT" | "SUBMITTED",
+				type: "PROFESSIONAL",
+			},
+			patientId: values.memberId,
+			payerId: values.payerId,
+			lines: values.lines.map((l, i) => ({
+				id: `ln-new-${i}`,
+				lineNumber: l.lineNumber,
+				serviceDate: l.serviceDate,
+				cptCode: l.cptCode,
+				billedAmount: l.billedAmount,
+				units: l.units,
+				modifiers: l.modifiers,
+			})),
+			diagnoses: values.diagnoses.map((d, i) => ({
+				id: `dx-new-${i}`,
+				position: d.position,
+				code: d.code,
+				codeType: d.codeType,
+			})),
+			documents: attachedFiles.map((name, i) => ({
+				id: `doc-new-${i}`,
+				name,
+				type: "attachment",
+			})),
+			status: status as "DRAFT" | "SUBMITTED",
+		};
+	};
+
+	const saveDraft = async () => {
+		const valid = await form.trigger();
+		if (!valid) {
+			toast.error("Please fix validation errors before saving");
+			return;
+		}
+		const values = form.getValues();
+		const loadingId = toast.loading("Saving draft...");
+		setIsSubmitting(true);
+		try {
+			if (isDemoMode()) {
+				const claim = await demoCreateClaim(buildClaimPayload(values, "DRAFT"));
+				bumpVersion();
+				toast.success(`Draft saved: ${claim.claimNumber}`, { id: loadingId });
+				router.push("/claims/drafts");
+			} else {
+				await onSubmit(values);
+			}
+		} catch {
+			toast.error("Failed to save draft", { id: loadingId });
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
 	const onSubmit = async (values: ClaimFormValues) => {
 		const loadingId = toast.loading("Creating comprehensive claim...");
 		setIsSubmitting(true);
 		try {
-			const totalCharges = values.lines.reduce((acc, curr) => acc + parseFloat(curr.billedAmount || "0"), 0).toFixed(2);
-			
+			if (isDemoMode()) {
+				const claim = await demoCreateClaim(buildClaimPayload(values, "SUBMITTED"));
+				bumpVersion();
+				toast.success(`Claim submitted: ${claim.claimNumber}`, { id: loadingId });
+				router.push("/claims");
+				return;
+			}
+
+			const totalCharges = values.lines
+				.reduce((acc, curr) => acc + parseFloat(curr.billedAmount || "0"), 0)
+				.toFixed(2);
+
 			const input = {
 				claimData: {
 					serviceFrom: values.serviceFrom,
@@ -141,8 +222,8 @@ export function NewClaimView() {
 					status: "DRAFT",
 					type: "PROFESSIONAL",
 				},
-				providerId: "e039cf14-05ef-4d49-b054-af407d4bd579", // Use the valid UUID for "Test Clinic" discovered in DB
-				patientId: values.memberId, // This is the Patient UUID
+				providerId: "e039cf14-05ef-4d49-b054-af407d4bd579",
+				patientId: values.memberId,
 				subscriberId: values.subscriberId,
 				payerId: values.payerId,
 				claimLines: values.lines.map((l) => ({
@@ -172,11 +253,16 @@ export function NewClaimView() {
 			} else {
 				toast.error(response.message || "Failed to create claim", { id: loadingId });
 			}
-		} catch (error) {
+		} catch {
 			toast.error("An unexpected error occurred", { id: loadingId });
 		} finally {
 			setIsSubmitting(false);
 		}
+	};
+
+	const handleAttachFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const names = Array.from(e.target.files || []).map((f) => f.name);
+		setAttachedFiles((prev) => [...prev, ...names]);
 	};
 
 	const steps = [
@@ -196,18 +282,26 @@ export function NewClaimView() {
 			<ModuleHeader
 				icon={FilePlus}
 				title="Submit New Claim"
-				subtitle="Portal ID: PRV-2026-001 • Tena'adam Team"
+				subtitle="Portal ID: PRV-2026-001 • Provider Network Team"
 				pillColor="bg-emerald-500"
 				actions={
 					<div className="flex items-center gap-3">
 						<Button
+							type="button"
 							variant="outline"
+							disabled={isSubmitting}
+							onClick={saveDraft}
 							className="rounded-xl px-6 border-border/40 text-xs font-black uppercase tracking-wider hover:bg-primary/5 transition-all"
 						>
 							<Save className="w-4 h-4 mr-2" />
 							Save Draft
 						</Button>
-						<Button className="rounded-xl px-6 bg-primary text-primary-foreground text-xs font-black uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+						<Button
+							type="button"
+							disabled={isSubmitting}
+							onClick={form.handleSubmit(onSubmit as any)}
+							className="rounded-xl px-6 bg-primary text-primary-foreground text-xs font-black uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+						>
 							<Send className="w-4 h-4 mr-2" />
 							Submit Claim
 						</Button>
@@ -291,6 +385,7 @@ export function NewClaimView() {
 											if (patient) {
 												form.setValue("memberId", patient.id);
 												form.setValue("patientName", `${patient.firstName} ${patient.lastName}`);
+												form.setValue("mrn", patient.mrn || "");
 												if (patient.birthDate) {
 													form.setValue("dob", patient.birthDate);
 												}
@@ -325,6 +420,16 @@ export function NewClaimView() {
 											Subscriber is required
 										</p>
 									)}
+								</div>
+								<div className="space-y-2">
+									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+										MRN
+									</label>
+									<input
+										{...form.register("mrn")}
+										placeholder="MRN-10001"
+										className="w-full px-4 py-2.5 bg-primary/5 border border-border/40 rounded-xl text-xs font-bold"
+									/>
 								</div>
 								<div className="space-y-1.5 opacity-50 grayscale pointer-events-none">
 									<label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Patient DOB (Auto-filled)</label>
@@ -664,6 +769,28 @@ export function NewClaimView() {
 											Verify all clinical and patient details before generation.
 										</p>
 									</div>
+								</div>
+
+								<div className="p-6 rounded-2xl border border-border/40 bg-muted/20 space-y-4">
+									<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+										Attach Documents (lab, Rx, invoices)
+									</label>
+									<input
+										type="file"
+										multiple
+										accept=".pdf,.jpg,.jpeg,.png"
+										onChange={handleAttachFiles}
+										className="text-xs"
+									/>
+									{attachedFiles.length > 0 && (
+										<ul className="space-y-1">
+											{attachedFiles.map((f) => (
+												<li key={f} className="text-xs font-bold text-foreground">
+													{f}
+												</li>
+											))}
+										</ul>
+									)}
 								</div>
 
 								{/* Structured Review Grid */}

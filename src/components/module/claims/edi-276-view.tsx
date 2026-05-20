@@ -19,6 +19,8 @@ import {
 import { useClaims } from "@/hooks/useClaims";
 import { useStatusInquiries } from "@/hooks/useStatusInquiries";
 import { checkClaimStatus } from "@/_service/actions/status-inquiry-actions";
+import { demoCheckClaimStatus } from "@/lib/demo/demo-api";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, Clock, FileText } from "lucide-react";
@@ -69,13 +71,15 @@ export function EDI276View() {
 		}
 
 		setIsSubmitting(true);
-		const res = await checkClaimStatus(selectedClaimId, "e039cf14-05ef-4d49-b054-af407d4bd579");
-		
+		const res = isDemoMode()
+			? await demoCheckClaimStatus(selectedClaimId)
+			: await checkClaimStatus(selectedClaimId, "e039cf14-05ef-4d49-b054-af407d4bd579");
+
 		if (res.success) {
 			setResult(res.data);
 			toast.success("Claim status inquiry completed");
 		} else {
-			toast.error(res.message || "Failed to fetch claim status");
+			toast.error(("message" in res && res.message) || "Failed to fetch claim status");
 		}
 		setIsSubmitting(false);
 	};
