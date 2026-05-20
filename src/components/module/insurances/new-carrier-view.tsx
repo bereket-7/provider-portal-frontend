@@ -66,8 +66,6 @@ export function NewCarrierView() {
 
 	const onSubmit = async (data: CarrierFormValues) => {
 		setIsSubmitting(true);
-		// Simulate API call
-		await new Promise((resolve) => setTimeout(resolve, 1500));
 		console.log("New Carrier Data:", data);
 		setIsSubmitting(false);
 		toast.success("Carrier Registered", {

@@ -68,8 +68,6 @@ export function NewCashClaimView() {
 
 	const onSubmit = async (data: CashClaimFormValues) => {
 		setIsSubmitting(true);
-		// Simulate API call
-		await new Promise((resolve) => setTimeout(resolve, 1500));
 		console.log("New Cash Claim Data:", data);
 		setIsSubmitting(false);
 		toast.success("Manual Claim Recorded", {

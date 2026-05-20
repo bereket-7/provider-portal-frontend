@@ -36,8 +36,6 @@ export default function LoginView() {
 		}
 
 		setIsLoading(true);
-		// Fake verification latency
-		await new Promise((resolve) => setTimeout(resolve, 1000));
 
 		if (email.includes("@") && password.length >= 4) {
 			login(selectedRole);

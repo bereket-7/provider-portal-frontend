@@ -94,43 +94,40 @@ export function EDI270View() {
 		e.preventDefault();
 		setIsSearching(true);
 
-		// Simulate API call using data inspired by the provided image
-		setTimeout(() => {
-			setResult({
-				id: "MEM-93821-44",
-				firstName: "ABRAHAM",
-				middleName: "K.",
-				lastName: "BEKELE",
-				dob: "12/12/1985",
-				gender: "Male",
-				mailingAddress: {
-					street: "4528 BOLE DRIVE",
-					city: "ADDIS ABABA, AA 1000",
-					ward: "01/NW",
-				},
-				residentialAddress: {
-					street: "4528 BOLE DRIVE",
-					city: "ADDIS ABABA, AA 1000",
-					ward: "01/NW",
-				},
-				recertDate: "09/30/2026",
-				planCoverage: "MEDICAID MANAGED CARE - GOLD",
-				programCode: "7582",
-				status: "Active",
-				coverageStart: "11/01/2021",
-				coverageEnd: "09/30/2026",
-				qmbIndicator: "NO",
-				caseNumber: "392812399",
-				serviceTypes: [
-					"Physician Services",
-					"Hospital Services",
-					"Pharmacy / Drug Benefits",
-					"Diagnostic Imaging",
-					"Laboratory and Radiology",
-				],
-			});
-			setIsSearching(false);
-		}, 1000);
+		setResult({
+			id: "MEM-93821-44",
+			firstName: "ABRAHAM",
+			middleName: "K.",
+			lastName: "BEKELE",
+			dob: "12/12/1985",
+			gender: "Male",
+			mailingAddress: {
+				street: "4528 BOLE DRIVE",
+				city: "ADDIS ABABA, AA 1000",
+				ward: "01/NW",
+			},
+			residentialAddress: {
+				street: "4528 BOLE DRIVE",
+				city: "ADDIS ABABA, AA 1000",
+				ward: "01/NW",
+			},
+			recertDate: "09/30/2026",
+			planCoverage: "MEDICAID MANAGED CARE - GOLD",
+			programCode: "7582",
+			status: "Active",
+			coverageStart: "11/01/2021",
+			coverageEnd: "09/30/2026",
+			qmbIndicator: "NO",
+			caseNumber: "392812399",
+			serviceTypes: [
+				"Physician Services",
+				"Hospital Services",
+				"Pharmacy / Drug Benefits",
+				"Diagnostic Imaging",
+				"Laboratory and Radiology",
+			],
+		});
+		setIsSearching(false);
 	};
 
 	return (
