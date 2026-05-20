@@ -160,7 +160,7 @@ export function NewCarrierView() {
 											</FormLabel>
 											<FormControl>
 												<Input
-													placeholder="e.g. UnitedHealthcare Global"
+													placeholder="e.g. Nyala Insurance"
 													className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40 placeholder:opacity-30"
 													{...field}
 												/>
@@ -262,7 +262,7 @@ export function NewCarrierView() {
 											<FormControl>
 												<div className="relative">
 													<Input
-														placeholder="e.g. Tena'adam Care+"
+														placeholder="e.g. Nyala Provider Network"
 														className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40 placeholder:opacity-30"
 														{...field}
 													/>

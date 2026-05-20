@@ -14,16 +14,19 @@ import {
 	CheckCircle2,
 	ChevronRight,
 	ClipboardCheck,
+	ClipboardList,
 	Clock,
 	DollarSign,
 	FileCode,
 	FilePlus,
+	FileSignature,
 	FileText,
 	FileX,
 	HelpCircle,
 	Lock,
 	LogOut,
 	Menu,
+	MessageSquare,
 	Network,
 	Receipt,
 	RefreshCw,
@@ -34,6 +37,8 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { demoGetOpenDisputeCount } from "@/lib/demo/demo-api";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import { useUserRole } from "@/providers/user-role-provider";
 
 export default function Sidebar() {
@@ -42,6 +47,9 @@ export default function Sidebar() {
 	// const [isCollapsed, setIsCollapsed] = useState(false);
 	const { isClaimManagement, role, logout } = useUserRole();
 	const pathname = usePathname();
+	const disputeBadge = isDemoMode()
+		? String(demoGetOpenDisputeCount())
+		: "2";
 
 	function handleNavigation() {
 		setIsMobileMenuOpen(false);
@@ -201,8 +209,14 @@ export default function Sidebar() {
 								<NavItem href="/claims" icon={FileText}>
 									All Claims
 								</NavItem>
+								<NavItem href="/claims/drafts" icon={ClipboardList}>
+									Draft Claims
+								</NavItem>
 								<NavItem href="/new-claim" icon={FilePlus}>
 									New Claim
+								</NavItem>
+								<NavItem href="/claims/status" icon={Activity}>
+									Claim Status
 								</NavItem>
 							</NavSection>
 
@@ -243,14 +257,29 @@ export default function Sidebar() {
 								<NavItem href="/eligibility" icon={UserCheck}>
 									Eligibility
 								</NavItem>
-								<NavItem href="/disputes" icon={AlertCircle} badge="2">
+								<NavItem href="/disputes" icon={AlertCircle} badge={disputeBadge}>
 									Disputes
+								</NavItem>
+								<NavItem href="/complaints" icon={MessageSquare}>
+									Complaints
 								</NavItem>
 								<NavItem href="/insurances" icon={Building2}>
 									Insurances
 								</NavItem>
 								<NavItem href="/organizations" icon={Network}>
 									Organizations
+								</NavItem>
+							</NavSection>
+
+							<NavSection title="Contracts">
+								<NavItem href="/agreements" icon={FileSignature}>
+									Agreements
+								</NavItem>
+								<NavItem href="/policies/rules" icon={Settings}>
+									Policy Rules
+								</NavItem>
+								<NavItem href="/policies/history" icon={RefreshCw}>
+									Policy History
 								</NavItem>
 							</NavSection>
 

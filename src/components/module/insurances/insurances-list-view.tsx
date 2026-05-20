@@ -35,7 +35,17 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type Insurance = (typeof insurances)[0];
+type Insurance = {
+	id: string;
+	name: string;
+	type: string;
+	tier: string;
+	network: string;
+	status: string;
+	category: string;
+	image: string;
+	payerCode?: string;
+};
 
 // Define Column interface locally to ensure correct typing
 interface Column<T> {
@@ -45,76 +55,6 @@ interface Column<T> {
 	className?: string;
 	render?: (item: T) => React.ReactNode;
 }
-
-// Mock data for insurances
-const insurances = [
-	{
-		id: "INS-001",
-		name: "UnitedHealthcare Global",
-		type: "Private",
-		tier: "Platinum Plus",
-		network: "Global Network",
-		status: "Active",
-		category: "Active",
-		image:
-			"https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800",
-	},
-	{
-		id: "INS-002",
-		name: "Allianz Care",
-		type: "International",
-		tier: "Elite Coverage",
-		network: "Tena'adam Care+",
-		status: "Verified",
-		category: "Active",
-		image:
-			"https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=800",
-	},
-	{
-		id: "INS-003",
-		name: "Aetna International",
-		type: "Private",
-		tier: "Standard Gold",
-		network: "National Network",
-		status: "Pending",
-		category: "Pending",
-		image:
-			"https://images.unsplash.com/photo-1554469384-e58fac16e23a?auto=format&fit=crop&q=80&w=800",
-	},
-	{
-		id: "INS-004",
-		name: "Cigna Life",
-		type: "Corporate",
-		tier: "Executive Plan",
-		network: "Tena'adam Primary",
-		status: "Active",
-		category: "Active",
-		image:
-			"https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800",
-	},
-	{
-		id: "INS-005",
-		name: "Bupa Global",
-		type: "Private",
-		tier: "World Elite",
-		network: "Tena'adam Care+",
-		status: "Verified",
-		category: "Active",
-		image:
-			"https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=800",
-	},
-	{
-		id: "INS-006",
-		name: "MetLife Insurance",
-		type: "Corporate",
-		tier: "Employee Care",
-		network: "Tena'adam Primary",
-		status: "Suspended",
-		category: "Suspended",
-		image:
-			"https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800",
-	},
-];
 
 export function InsurancesListView() {
 	const [activeTab, setActiveTab] = useState<
@@ -126,16 +66,16 @@ export function InsurancesListView() {
 
 	const { data: payers, isLoading } = usePayers(searchTerm);
 
-	const filteredInsurances = (payers || []).map((p: any) => ({
+	const filteredInsurances: Insurance[] = (payers || []).map((p: any) => ({
 		id: p.id,
 		name: p.name,
-		type: "Commercial", // Default for now
-		tier: "National",
-		network: "Tena'adam Primary",
-		status: "Active",
-		category: "Active",
+		type: p.type || "Commercial",
+		tier: p.tier || "National",
+		network: p.network || "Provider Network",
+		status: p.status === "active" ? "Active" : p.status === "inactive" ? "Inactive" : "Active",
+		category: p.status === "active" ? "Active" : p.status === "inactive" ? "Suspended" : "Active",
 		image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800",
-		payerCode: p.payerCode
+		payerCode: p.payerCode,
 	}));
 
 	const types = ["Commercial", "Social", "Private"];
