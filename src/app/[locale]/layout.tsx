@@ -14,6 +14,7 @@ import { EnvCheckerProvider } from "@/providers/env-checker-provider";
 import { NetworkProvider } from "@/providers/network-provider";
 import QueryProviders from "@/providers/query-provider";
 import { SettingsProvider } from "@/providers/settings-provider";
+import { DemoStoreProvider } from "@/lib/demo/demo-store-context";
 import { UserRoleProvider } from "@/providers/user-role-provider";
 
 const geistSans = Geist({
@@ -59,10 +60,12 @@ export default async function LocaleLayout({
 								<SettingsProvider>
 									<AnalyticsProvider>
 										<NextIntlClientProvider messages={messages}>
-											<UserRoleProvider>
-												<LayoutContent>{children}</LayoutContent>
-												<Toaster position="bottom-right" />
-											</UserRoleProvider>
+											<DemoStoreProvider>
+												<UserRoleProvider>
+													<LayoutContent>{children}</LayoutContent>
+													<Toaster position="bottom-right" />
+												</UserRoleProvider>
+											</DemoStoreProvider>
 										</NextIntlClientProvider>
 									</AnalyticsProvider>
 								</SettingsProvider>
