@@ -12,7 +12,11 @@ import {
 	Upload,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { demoCreatePriorAuth } from "@/lib/demo/demo-api";
+import { isDemoMode } from "@/lib/demo/demo-mode";
+import { useDemoStore } from "@/lib/demo/demo-store-context";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import * as z from "zod";
 
 import { PremiumButton } from "@/components/ui/custom/premium-button";
@@ -53,6 +57,8 @@ export type PriorAuthorizationFormValues = z.infer<
 >;
 
 export function NewAuthRequestView() {
+	const router = useRouter();
+	const { bumpVersion } = useDemoStore();
 	const form = useForm<PriorAuthorizationFormValues>({
 		resolver: zodResolver(priorAuthorizationSchema),
 		defaultValues: {
@@ -77,6 +83,22 @@ export function NewAuthRequestView() {
 	});
 
 	const handleSubmit = async (data: PriorAuthorizationFormValues) => {
+		if (isDemoMode()) {
+			const auth = await demoCreatePriorAuth({
+				memberId: data.member_id,
+				patient: "Selam Tesfaye",
+				service: data.requested_service,
+				reason_for_request: data.reason_for_request,
+				date_of_service: data.date_of_service,
+				priority: data.priority,
+				clinicalJustification: data.reason_for_request,
+			});
+			bumpVersion();
+			toast.success(`Prior auth submitted: ${auth.authorizationNumber}`);
+			form.reset();
+			router.push("/authorizations");
+			return;
+		}
 		console.log("Form submitted:", data);
 		toast.success("Request Submitted Successfully", {
 			description: "Tilla AI engine is now processing your authorization.",

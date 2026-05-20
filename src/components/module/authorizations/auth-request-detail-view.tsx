@@ -19,30 +19,41 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
+import { useDemoPriorAuth } from "@/hooks/useDemoEntities";
 
 interface AuthRequestDetailViewProps {
 	id: string;
 }
 
 export function AuthRequestDetailView({ id }: AuthRequestDetailViewProps) {
-	// Mock detailed data
+	const { data: rawAuth, isLoading } = useDemoPriorAuth(id);
+
+	if (isLoading || !rawAuth) {
+		return (
+			<div className="flex items-center justify-center min-h-[400px]">
+				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+			</div>
+		);
+	}
+
 	const auth = {
-		id,
-		patient: "Alice Thompson",
-		dob: "May 12, 1985",
-		memberId: "TEN-992-001",
-		provider: "Dr. James Miller",
-		facility: "Northside Medical Center",
-		type: "Prior Authorization",
-		service: "MRI Lumbar Spine",
-		diagnosis: "M54.5 - Low back pain",
-		startDate: "Feb 18, 2026",
-		endDate: "May 18, 2026",
-		status: "Approved",
-		priority: "Urgent",
-		submittedAt: "Feb 17, 2026 10:45 AM",
-		approvedAt: "Feb 18, 2026 09:30 AM",
-		referenceNumber: "AUTH-2026-X992",
+		id: rawAuth.id,
+		patient: rawAuth.patient,
+		memberId: rawAuth.memberId,
+		provider: rawAuth.provider,
+		type: rawAuth.type,
+		service: rawAuth.service,
+		startDate: rawAuth.startDate,
+		endDate: rawAuth.endDate,
+		status: rawAuth.status,
+		priority: rawAuth.priority,
+		referenceNumber: rawAuth.authorizationNumber,
+		decisionNotes: rawAuth.decisionNotes,
+		allowedServices: rawAuth.allowedServices,
+		limitations: rawAuth.limitations,
+		diagnosis: rawAuth.diagnosisDescription || "See clinical notes",
+		facility: "Black Lion Specialized Hospital",
+		dob: "—",
 	};
 
 	const timeline = [
@@ -55,7 +66,7 @@ export function AuthRequestDetailView({ id }: AuthRequestDetailViewProps) {
 		{
 			status: "Clinical Review",
 			date: "Feb 17, 2026 02:20 PM",
-			description: "Under medical necessity assessment by Tena'adam team.",
+			description: "Under medical necessity assessment by payer clinical team.",
 			done: true,
 		},
 		{

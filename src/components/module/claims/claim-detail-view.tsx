@@ -20,19 +20,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
 import { useClaim } from "@/hooks/useClaim";
 import { submitClaimToInsurance } from "@/_service/actions/claim-actions";
+import { demoResubmitClaim, demoSubmitClaim } from "@/lib/demo/demo-api";
+import { isDemoMode } from "@/lib/demo/demo-mode";
+import { useDemoStore } from "@/lib/demo/demo-store-context";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
 
 interface ClaimDetailViewProps {
 	id: string;
 }
 
 export function ClaimDetailView({ id }: ClaimDetailViewProps) {
+	const router = useRouter();
+	const { bumpVersion } = useDemoStore();
 	const { data: claim, isLoading, refetch } = useClaim(id);
 
 	const handleSendToInsurance = async () => {
 		const loadingId = toast.loading("Generating 837 and transmitting to insurance...");
 		try {
+			if (isDemoMode()) {
+				await demoSubmitClaim(id);
+				bumpVersion();
+				toast.success("837 transmitted successfully", { id: loadingId });
+				refetch();
+				return;
+			}
 			const response = await submitClaimToInsurance(id);
 			if (response.ok) {
 				toast.success(response.message || "837 transmitted successfully", { id: loadingId });
@@ -40,9 +53,21 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 			} else {
 				toast.error(response.message || "Transmission failed", { id: loadingId });
 			}
-		} catch (error) {
+		} catch {
 			toast.error("An unexpected error occurred during transmission", { id: loadingId });
 		}
+	};
+
+	const handleResubmit = async () => {
+		if (!isDemoMode()) return;
+		const copy = await demoResubmitClaim(id);
+		bumpVersion();
+		toast.success(`Corrected claim saved as draft: ${copy.claimNumber}`);
+		router.push(`/claims/${copy.id}`);
+	};
+
+	const handleDownloadPdf = () => {
+		window.print();
 	};
 
 	const statusColors: Record<string, string> = {
@@ -124,9 +149,17 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 						</div>
 					</div>
 					<div className="flex items-center gap-3">
-						<button className="p-2.5 rounded-xl border border-border/40 bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-all shadow-sm">
+						<button
+							onClick={handleDownloadPdf}
+							className="p-2.5 rounded-xl border border-border/40 bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-all shadow-sm"
+						>
 							<Printer className="w-4 h-4" />
 						</button>
+						{claim.status === "REJECTED" && isDemoMode() && (
+							<PremiumButton onClick={handleResubmit} className="px-6 h-10 text-[9px] uppercase font-black">
+								Resubmit Corrected Claim
+							</PremiumButton>
+						)}
 						{claim.status !== "837_SUBMITTED" && claim.ediStatus !== "837_submitted" && (
 							<PremiumButton 
 								onClick={handleSendToInsurance}
@@ -136,9 +169,13 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 								Submit to Insurance
 							</PremiumButton>
 						)}
-						<PremiumButton variant="outline" className="px-6 h-10 border-border/40 text-[9px] uppercase font-black tracking-widest rounded-xl transition-all">
+						<PremiumButton
+							variant="outline"
+							onClick={handleDownloadPdf}
+							className="px-6 h-10 border-border/40 text-[9px] uppercase font-black tracking-widest rounded-xl transition-all"
+						>
 							<Download className="w-3.5 h-3.5 mr-2" />
-							Export Details
+							Download PDF
 						</PremiumButton>
 					</div>
 				</div>
@@ -310,6 +347,25 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 									</div>
 								</div>
 							</div>
+
+							{(claim.documents?.length ?? 0) > 0 && (
+								<div className="space-y-4">
+									<h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70">
+										Submitted Documents
+									</h4>
+									<ul className="space-y-2">
+										{claim.documents?.map((doc: any) => (
+											<li
+												key={doc.id}
+												className="flex items-center gap-2 p-3 rounded-xl border border-border/40 bg-muted/20"
+											>
+												<FileText className="w-4 h-4 text-primary" />
+												<span className="text-xs font-bold">{doc.name}</span>
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
 						</CardContent>
 					</Card>
 				</div>
@@ -326,34 +382,69 @@ export function ClaimDetailView({ id }: ClaimDetailViewProps) {
 						<CardContent className="p-8">
 							<div className="space-y-8 relative">
 								<div className="absolute left-[9px] top-2 bottom-6 w-[1.5px] bg-gradient-to-b from-primary/30 to-border/20" />
-
-								<div className="relative pl-8">
-									<div className="absolute left-0 top-1.5 w-[20px] h-[20px] rounded-full border-[3px] border-card bg-primary shadow-lg shadow-primary/20" />
-									<div className="space-y-1">
-										<p className="text-[10px] font-black text-foreground uppercase tracking-wider">
-											Claim Submitted
-										</p>
-										<p className="text-[9px] font-bold text-muted-foreground opacity-50 tabular-nums">
-											{claim.submittedAt ? format(new Date(claim.submittedAt), "MMM dd, yyyy HH:mm") : "Pending"}
-										</p>
+								{(claim.timeline?.length
+									? claim.timeline
+									: [
+											{
+												status: "Created",
+												date: claim.createdAt,
+												description: "Claim created",
+												done: true,
+											},
+											{
+												status: "Submitted",
+												date: claim.submittedAt,
+												description: "Submitted to payer",
+												done: !!claim.submittedAt,
+											},
+										]
+								).map((step: any, i: number) => (
+									<div key={i} className="relative pl-8">
+										<div
+											className={`absolute left-0 top-1.5 w-[20px] h-[20px] rounded-full border-[3px] border-card shadow-lg ${
+												step.done ? "bg-primary shadow-primary/20" : "bg-muted"
+											}`}
+										/>
+										<div className="space-y-1">
+											<p className="text-[10px] font-black text-foreground uppercase tracking-wider">
+												{step.status}
+											</p>
+											<p className="text-[9px] font-bold text-muted-foreground opacity-50 tabular-nums">
+												{step.date
+													? format(new Date(step.date), "MMM dd, yyyy HH:mm")
+													: "Pending"}
+											</p>
+											<p className="text-[9px] text-muted-foreground">{step.description}</p>
+										</div>
 									</div>
-								</div>
-
-								<div className="relative pl-8">
-									<div className="absolute left-0 top-1.5 w-[20px] h-[20px] rounded-full border-[3px] border-card bg-emerald-500 shadow-lg shadow-emerald-500/20" />
-									<div className="space-y-1">
-										<p className="text-[10px] font-black text-foreground uppercase tracking-wider">
-											Adjudication Complete
-										</p>
-										<p className="text-[9px] font-bold text-muted-foreground opacity-50 tabular-nums">
-											{claim.adjudicatedAt ? format(new Date(claim.adjudicatedAt), "MMM dd, yyyy HH:mm") : "In Process"}
-										</p>
-										<p className="text-[10px] font-black text-emerald-600 uppercase mt-2">
-											Status: APPROVED
-										</p>
-									</div>
-								</div>
+								))}
 							</div>
+							{claim.rejectionReason && (
+								<div className="mt-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20">
+									<p className="text-[10px] font-black uppercase text-rose-600">
+										Rejection Reason
+									</p>
+									<p className="text-xs font-bold mt-1">{claim.rejectionReason}</p>
+								</div>
+							)}
+							{(claim.insuranceMessages?.length ?? 0) > 0 && (
+								<div className="mt-6 space-y-2">
+									<p className="text-[10px] font-black uppercase text-muted-foreground">
+										Insurance Messages
+									</p>
+									{claim.insuranceMessages?.map((msg: any, i: number) => (
+										<div
+											key={i}
+											className="p-3 rounded-xl bg-muted/30 text-xs font-medium"
+										>
+											<p className="text-[9px] text-muted-foreground">
+												{format(new Date(msg.date), "MMM dd, yyyy")}
+											</p>
+											{msg.message}
+										</div>
+									))}
+								</div>
+							)}
 						</CardContent>
 					</Card>
 

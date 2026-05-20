@@ -76,6 +76,9 @@ export default function LoginView() {
 						<p className="text-[11px] font-medium text-muted-foreground/60">
 							Secure access to provider infrastructure.
 						</p>
+						<p className="text-[10px] font-bold text-primary/80 mt-2">
+							Demo: any email + password (4+ chars) → pick a role
+						</p>
 					</div>
 
 					<form onSubmit={handleLogin} className="space-y-4">

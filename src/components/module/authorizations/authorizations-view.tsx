@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 
 import {
 	Activity,
@@ -18,68 +19,42 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
-
-const mockAuthorizations = [
-	{
-		id: "AUTH-8821",
-		patient: "Alice Thompson",
-		provider: "Dr. James Miller",
-		type: "Prior Authorization",
-		service: "MRI Lumbar Spine",
-		startDate: "Feb 18, 2026",
-		endDate: "May 18, 2026",
-		status: "Approved",
-		priority: "Urgent",
-	},
-	{
-		id: "AUTH-8822",
-		patient: "Robert Wilson",
-		provider: "City General Hospital",
-		type: "Referral",
-		service: "Cardiology Consult",
-		startDate: "Feb 17, 2026",
-		endDate: "Aug 17, 2026",
-		status: "Pending",
-		priority: "Routine",
-	},
-	{
-		id: "AUTH-8823",
-		patient: "Elena Rodriguez",
-		provider: "Dr. Sarah Chen",
-		type: "Medical Necessity",
-		service: "Specialized Physical Therapy",
-		startDate: "Feb 15, 2026",
-		endDate: "Mar 15, 2026",
-		status: "Expired",
-		priority: "Routine",
-	},
-	{
-		id: "AUTH-8824",
-		patient: "David Park",
-		provider: "Metro Imaging Center",
-		type: "Prior Authorization",
-		service: "CT Head w/ Contrast",
-		startDate: "Feb 19, 2026",
-		endDate: "May 19, 2026",
-		status: "Denied",
-		priority: "Emergency",
-	},
-	{
-		id: "AUTH-8825",
-		patient: "Grace Miller",
-		provider: "Dr. Kevin Adams",
-		type: "Procedure Auth",
-		service: "Knee Arthroscopy",
-		startDate: "Feb 22, 2026",
-		endDate: "Aug 22, 2026",
-		status: "Approved",
-		priority: "Urgent",
-	},
-];
-
-type AuthorizationRequest = (typeof mockAuthorizations)[0];
+import { usePriorAuthorizations } from "@/hooks/usePriorAuthorizations";
+import { usePayers } from "@/hooks/usePayers";
 
 export function AuthorizationsView() {
+	const [statusFilter, setStatusFilter] = useState("all");
+	const { data: auths, isLoading } = usePriorAuthorizations(
+		statusFilter === "all" ? undefined : statusFilter
+	);
+	const { data: payers } = usePayers();
+
+	const tableData = useMemo(
+		() =>
+			(auths || []).map((a: any) => ({
+				id: a.id,
+				authId: a.authorizationNumber || a.id,
+				patient: a.patient || (a.member ? `${a.member.firstName} ${a.member.lastName}` : "Unknown"),
+				provider: a.provider || "Dr. Yonatan Girma",
+				type: a.type || "Prior Authorization",
+				service: a.service || a.requested_service || "—",
+				startDate: a.startDate,
+				endDate: a.endDate,
+				status: a.status,
+				priority: a.priority || "Routine",
+				payerId: a.payerId,
+			})),
+		[auths]
+	);
+
+	if (isLoading) {
+		return (
+			<div className="flex items-center justify-center min-h-[400px]">
+				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+			</div>
+		);
+	}
+
 	return (
 		<div className="relative space-y-8 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">
 			{/* Aesthetic Background Elements */}
@@ -170,17 +145,31 @@ export function AuthorizationsView() {
 				))}
 			</div>
 
+			<div className="flex flex-wrap gap-2 p-4 rounded-2xl border border-border/40 bg-card/50">
+				{["all", "PENDING", "APPROVED", "DENIED", "NEW"].map((s) => (
+					<button
+						key={s}
+						onClick={() => setStatusFilter(s)}
+						className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg ${
+							statusFilter === s ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+						}`}
+					>
+						{s === "all" ? "All" : s}
+					</button>
+				))}
+			</div>
+
 			<div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
 				<DataTable
 					title="Authorization Registry"
 					subtitle="Management and tracking of care authorizations"
-					data={mockAuthorizations}
+					data={tableData}
 					onExport={() => console.log("Exporting authorizations...")}
 					columns={[
 						{
 							header: "Authorization ID",
 							key: "id",
-							render: (auth: AuthorizationRequest) => (
+							render: (auth: any) => (
 								<div className="flex items-center gap-4">
 									<div className="p-2.5 bg-primary/5 rounded-lg border border-primary/10">
 										<ShieldCheck className="w-4 h-4 text-primary" />
@@ -209,7 +198,7 @@ export function AuthorizationsView() {
 						{
 							header: "Patient",
 							key: "patient",
-							render: (auth: AuthorizationRequest) => (
+							render: (auth: any) => (
 								<div className="space-y-0.5">
 									<p className="text-[11px] font-black text-foreground tracking-tight uppercase">
 										{auth.patient}
@@ -224,7 +213,7 @@ export function AuthorizationsView() {
 						{
 							header: "Service Details",
 							key: "service",
-							render: (auth: AuthorizationRequest) => (
+							render: (auth: any) => (
 								<div className="space-y-0.5">
 									<p className="text-[11px] font-black text-foreground tracking-tight uppercase">
 										{auth.service}
@@ -238,7 +227,7 @@ export function AuthorizationsView() {
 						{
 							header: "Validity Period",
 							key: "startDate",
-							render: (auth: AuthorizationRequest) => (
+							render: (auth: any) => (
 								<div className="flex items-center gap-2">
 									<Calendar className="w-3 h-3 text-muted-foreground opacity-60" />
 									<span className="text-[10px] font-bold text-foreground/80 whitespace-nowrap">
@@ -251,14 +240,14 @@ export function AuthorizationsView() {
 							header: "Status",
 							key: "status",
 							align: "center",
-							render: (auth: AuthorizationRequest) => (
+							render: (auth: any) => (
 								<Badge
 									className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest border-none ${
-										auth.status === "Approved"
+										["APPROVED", "Approved"].includes(auth.status)
 											? "bg-emerald-500/10 text-emerald-600"
-											: auth.status === "Denied"
+											: ["DENIED", "Denied"].includes(auth.status)
 												? "bg-rose-500/10 text-rose-600"
-												: auth.status === "Pending"
+												: ["PENDING", "Pending", "NEW"].includes(auth.status)
 													? "bg-amber-500/10 text-amber-600"
 													: "bg-slate-500/10 text-slate-600"
 									}`}
@@ -271,7 +260,7 @@ export function AuthorizationsView() {
 							header: "",
 							key: "action",
 							align: "right",
-							render: (auth: AuthorizationRequest) => (
+							render: (auth: any) => (
 								<Link
 									href={`/authorizations/${auth.id}`}
 									className="p-2 hover:bg-primary/5 rounded-lg transition-colors border border-transparent hover:border-border/40 inline-block"
