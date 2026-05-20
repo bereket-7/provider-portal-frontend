@@ -17,50 +17,45 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 
-// Mock data for pending claims
-const pendingClaims = [
-	{
-		id: "CLM-PEN-001",
-		patient: "James Miller",
-		date: "Feb 19, 2026",
-		amount: "$1,450.00",
-		status: "Pending",
-		aging: "2 Days",
-		priority: "Medium",
-	},
-	{
-		id: "CLM-PEN-002",
-		patient: "Susan Bone",
-		date: "Feb 18, 2026",
-		amount: "$3,800.00",
-		status: "Pending",
-		aging: "3 Days",
-		priority: "High",
-	},
-	{
-		id: "CLM-PEN-003",
-		patient: "Edward Norton",
-		date: "Feb 15, 2026",
-		amount: "$750.00",
-		status: "Pending",
-		aging: "6 Days",
-		priority: "Critical",
-	},
-	{
-		id: "CLM-PEN-004",
-		patient: "Alicia Keys",
-		date: "Feb 20, 2026",
-		amount: "$1,100.00",
-		status: "In Process",
-		aging: "1 Day",
-		priority: "Low",
-	},
-];
+import { useClaims } from "@/hooks/useClaims";
 
-type Claim = (typeof pendingClaims)[0];
+function usePendingClaimsData() {
+	const { data: claims, isLoading } = useClaims();
+	const pendingClaims = (claims || [])
+		.filter((c: any) => ["PENDING", "SUBMITTED"].includes(c.status))
+		.map((c: any) => ({
+			id: c.claimNumber,
+			patient: `${c.patient?.firstName} ${c.patient?.lastName}`,
+			date: c.serviceFrom,
+			amount: `ETB ${parseFloat(c.totalCharges || "0").toLocaleString()}`,
+			status: "Pending",
+			aging: "2 Days",
+			priority: "Medium",
+		}));
+	return { pendingClaims, isLoading };
+}
+
+type Claim = {
+	id: string;
+	patient: string;
+	date: string;
+	amount: string;
+	status: string;
+	aging: string;
+	priority: string;
+};
 
 export function PendingClaimsView() {
 	const router = useRouter();
+	const { pendingClaims, isLoading } = usePendingClaimsData();
+
+	if (isLoading) {
+		return (
+			<div className="flex items-center justify-center min-h-[400px]">
+				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+			</div>
+		);
+	}
 
 	return (
 		<div className="relative space-y-6 pb-12 max-w-[1500px] mx-auto px-4 sm:px-6">

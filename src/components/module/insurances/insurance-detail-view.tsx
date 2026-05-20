@@ -20,30 +20,44 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
+import { useDemoAgreements, useDemoPayer } from "@/hooks/useDemoEntities";
 
 interface InsuranceDetailViewProps {
 	id: string;
 }
 
 export function InsuranceDetailView({ id }: InsuranceDetailViewProps) {
-	// Mock detailed data for insurance carrier
+	const { data: payer, isLoading } = useDemoPayer(id);
+	const { data: agreements } = useDemoAgreements();
+	const agreement = agreements?.find((a: any) => a.payerId === id);
+
+	if (isLoading || !payer) {
+		return (
+			<div className="flex items-center justify-center min-h-[400px]">
+				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+			</div>
+		);
+	}
+
 	const insurance = {
-		id,
-		name: "UnitedHealthcare Global",
-		type: "Private Insurance",
-		tier: "Platinum Plus",
-		network: "Global Network",
-		status: "Active",
-		since: "Jan 2020",
-		headquarters: "Minnetonka, Minnesota, USA (Regional: Addis Ababa)",
-		phone: "+251 11 998 8776",
-		email: "partnerships@uhc-global.com",
-		website: "www.uhcglobal.com",
-		description:
-			"UnitedHealthcare Global provides a comprehensive range of health and well-being solutions to individuals, families, and corporate clients worldwide, ensuring seamless access to high-quality care through an extensive provider network.",
-		rating: 4.9,
-		planVolume: "50+ Active Plans",
+		id: payer.id,
+		name: payer.name,
+		type: payer.type,
+		tier: payer.tier,
+		network: payer.network,
+		status: payer.status === "active" ? "Active" : "Inactive",
+		phone: payer.contactPhone,
+		email: payer.contactEmail,
+		headquarters: `${payer.region}, ${payer.country}`,
+		description: `Provider agreement with ${payer.name} for ${payer.network} network services.`,
+		coverageRules: agreement?.coverageRules || "Per network agreement Schedule A",
+		paymentTerms: agreement?.paymentTerms || "Net 30",
+		reimbursementRules: agreement?.reimbursementRules || "Fee schedule applies",
 		verifiedDate: "Feb 10, 2026",
+		rating: 4.8,
+		planVolume: "50+ Active Plans",
+		website: payer.contactEmail?.split("@")[1] || "insurance.et",
+		since: "Jan 2020",
 	};
 
 	const stats = [
@@ -118,7 +132,12 @@ export function InsuranceDetailView({ id }: InsuranceDetailViewProps) {
 							<Download className="w-3.5 h-3.5 mr-2 inline-block" />
 							Agreement PDF
 						</button>
-						<PremiumButton className="px-6 h-10 shadow-lg shadow-primary/10 text-[9px] uppercase font-black tracking-widest rounded-xl">
+						<Link href={`/insurances/${id}/members`}>
+							<PremiumButton className="px-6 h-10 shadow-lg shadow-primary/10 text-[9px] uppercase font-black tracking-widest rounded-xl">
+								View Members
+							</PremiumButton>
+						</Link>
+						<PremiumButton className="px-6 h-10 border-border/40 text-[9px] uppercase font-black tracking-widest rounded-xl" variant="outline">
 							Contact Carrier
 						</PremiumButton>
 					</div>
@@ -316,7 +335,7 @@ export function InsuranceDetailView({ id }: InsuranceDetailViewProps) {
 								</h3>
 							</div>
 							<p className="text-xs font-bold text-slate-300 leading-relaxed">
-								UnitedHealthcare maintains a **top-tier** ranking for claim
+								{insurance.name} maintains a **top-tier** ranking for claim
 								processing efficiency and member resolution speed.
 							</p>
 							<div className="grid grid-cols-2 gap-4 mt-2">

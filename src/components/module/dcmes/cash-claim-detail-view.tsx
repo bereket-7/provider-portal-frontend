@@ -26,7 +26,7 @@ export function CashClaimDetailView({ id }: CashClaimDetailViewProps) {
 	// Mock data for the specific claim
 	const claim = {
 		id: id,
-		patientName: "Sarah Johnson",
+		patientName: "Selam Tesfaye",
 		patientId: "PAT-93821",
 		serviceType: "Annual Physical Exam",
 		serviceDate: "Feb 17, 2026",

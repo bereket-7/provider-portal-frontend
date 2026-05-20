@@ -170,7 +170,7 @@ export function NewCashClaimView() {
 											<FormControl>
 												<div className="relative">
 													<Input
-														placeholder="e.g. Sarah Johnson"
+														placeholder="e.g. Selam Tesfaye"
 														className="bg-primary/5 border-border/40 rounded-xl h-11 px-4 pl-10 shadow-none font-bold text-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/5 focus-visible:border-primary/40 placeholder:opacity-30"
 														{...field}
 													/>

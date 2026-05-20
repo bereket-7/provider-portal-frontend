@@ -31,6 +31,8 @@ import { Label } from "@/components/ui/label";
 import { usePatients } from "@/hooks/usePatients";
 import { usePayers } from "@/hooks/usePayers";
 import { checkEligibility } from "@/_service/actions/eligibility-actions";
+import { demoCheckEligibility } from "@/lib/demo/demo-api";
+import { isDemoMode } from "@/lib/demo/demo-mode";
 import { toast } from "sonner";
 
 interface MemberResult {
@@ -88,13 +90,15 @@ export function EligibilityInquiryView() {
 
 		setIsSearching(true);
 
-		const res = await checkEligibility({
-			providerId: "e039cf14-05ef-4d49-b054-af407d4bd579", // Default provider
-			payerId: selectedPayerId,
-			patientId: selectedPatientId,
-			serviceTypeCode: serviceTypeCode,
-			dateOfService: new Date().toISOString().split('T')[0],
-		});
+		const res = isDemoMode()
+			? await demoCheckEligibility()
+			: await checkEligibility({
+					providerId: "e039cf14-05ef-4d49-b054-af407d4bd579",
+					payerId: selectedPayerId,
+					patientId: selectedPatientId,
+					serviceTypeCode: serviceTypeCode,
+					dateOfService: new Date().toISOString().split("T")[0],
+				});
 
 		if (res.success) {
 			const patient = patients?.find((p: any) => p.id === selectedPatientId);
@@ -128,7 +132,7 @@ export function EligibilityInquiryView() {
 			});
 			toast.success("Eligibility check successful");
 		} else {
-			toast.error(res.message || "Eligibility check failed");
+			toast.error(("message" in res && res.message) || "Eligibility check failed");
 		}
 		setIsSearching(false);
 	};
