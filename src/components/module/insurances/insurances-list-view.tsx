@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/custom/data-table";
 import { ModuleHeader } from "@/components/ui/custom/module-header";
 import { usePayers } from "@/hooks/usePayers";
+import { getPayerLogoUrl } from "@/lib/demo/ethiopian-data";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -43,7 +44,7 @@ type Insurance = {
 	network: string;
 	status: string;
 	category: string;
-	image: string;
+	logoUrl?: string;
 	payerCode?: string;
 };
 
@@ -74,7 +75,7 @@ export function InsurancesListView() {
 		network: p.network || "Provider Network",
 		status: p.status === "active" ? "Active" : p.status === "inactive" ? "Inactive" : "Active",
 		category: p.status === "active" ? "Active" : p.status === "inactive" ? "Suspended" : "Active",
-		image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800",
+		logoUrl: getPayerLogoUrl(p.id, p.logoUrl),
 		payerCode: p.payerCode,
 	}));
 
@@ -282,17 +283,24 @@ function InsuranceCard({
 		<Card
 			className={`group border-border/40 bg-card rounded-2xl overflow-hidden py-0 ${cardShadow}`}
 		>
-			{/* Card Image Header — shorter, wider feel */}
-			<div className="relative h-36 w-full overflow-hidden">
-				<img
-					src={insurance.image}
-					alt={insurance.name}
-					className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-				/>
-				<div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+			{/* Card logo header */}
+			<div className="relative h-36 w-full overflow-hidden bg-white dark:bg-slate-900 border-b border-border/30">
+				{insurance.logoUrl ? (
+					// eslint-disable-next-line @next/next/no-img-element
+					<img
+						src={insurance.logoUrl}
+						alt={`${insurance.name} logo`}
+						className="relative z-0 w-full h-full object-contain p-5 transition-transform duration-700 group-hover:scale-105"
+					/>
+				) : (
+					<div className="w-full h-full flex items-center justify-center">
+						<Building2 className="w-14 h-14 text-muted-foreground/30" />
+					</div>
+				)}
+				<div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-[1]" />
 
 				{/* Status badge — top right */}
-				<div className="absolute top-3 right-3">
+				<div className="absolute top-3 right-3 z-[2]">
 					<span
 						className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm ${
 							insurance.status === "Active" || insurance.status === "Verified"
@@ -306,8 +314,8 @@ function InsuranceCard({
 					</span>
 				</div>
 
-				{/* Name overlay at bottom of image */}
-				<div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
+				{/* Name overlay at bottom */}
+				<div className="absolute bottom-0 left-0 right-0 px-5 pb-4 z-[2]">
 					<p className="text-[9px] font-semibold text-white/50 uppercase tracking-widest mb-0.5">
 						{insurance.type} Carrier
 					</p>
@@ -472,6 +480,23 @@ function getTableColumns(): Column<Insurance>[] {
 			header: "Insurance Name",
 			key: "name",
 			className: "px-8 font-bold text-sm",
+			render: (p: Insurance) => (
+				<div className="flex items-center gap-3">
+					{p.logoUrl ? (
+						// eslint-disable-next-line @next/next/no-img-element
+						<img
+							src={p.logoUrl}
+							alt=""
+							className="h-8 w-8 object-contain rounded-md bg-white border border-border/30 p-0.5"
+						/>
+					) : (
+						<div className="h-8 w-8 rounded-md bg-muted/40 flex items-center justify-center">
+							<Building2 className="w-4 h-4 text-muted-foreground" />
+						</div>
+					)}
+					<span>{p.name}</span>
+				</div>
+			),
 		},
 		{
 			header: "Carrier Type",

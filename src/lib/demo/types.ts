@@ -43,6 +43,7 @@ export interface DemoPayer {
 	contactPhone: string;
 	tier: string;
 	network: string;
+	logoUrl?: string;
 }
 
 export interface DemoClaimLine {

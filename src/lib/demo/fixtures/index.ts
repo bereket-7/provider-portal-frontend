@@ -18,6 +18,7 @@ const payers = [
 		contactPhone: ETHIOPIAN_INSURERS.nyala.phone,
 		tier: "National",
 		network: "Nyala Provider Network",
+		logoUrl: ETHIOPIAN_INSURERS.nyala.logoUrl,
 	},
 	{
 		id: ETHIOPIAN_INSURERS.united.id,
@@ -31,6 +32,7 @@ const payers = [
 		contactPhone: ETHIOPIAN_INSURERS.united.phone,
 		tier: "Commercial",
 		network: "United National Network",
+		logoUrl: ETHIOPIAN_INSURERS.united.logoUrl,
 	},
 	{
 		id: ETHIOPIAN_INSURERS.eic.id,
@@ -57,6 +59,7 @@ const payers = [
 		contactPhone: ETHIOPIAN_INSURERS.awash.phone,
 		tier: "Regional",
 		network: "Awash Care Network",
+		logoUrl: ETHIOPIAN_INSURERS.awash.logoUrl,
 	},
 	{
 		id: ETHIOPIAN_INSURERS.oromia.id,
@@ -70,6 +73,7 @@ const payers = [
 		contactPhone: ETHIOPIAN_INSURERS.oromia.phone,
 		tier: "Regional",
 		network: "Oromia Health Network",
+		logoUrl: ETHIOPIAN_INSURERS.oromia.logoUrl,
 	},
 	{
 		id: ETHIOPIAN_INSURERS.ethioLife.id,
@@ -83,6 +87,7 @@ const payers = [
 		contactPhone: ETHIOPIAN_INSURERS.ethioLife.phone,
 		tier: "Legacy",
 		network: "Ethio Life Network",
+		logoUrl: ETHIOPIAN_INSURERS.ethioLife.logoUrl,
 	},
 ];
 

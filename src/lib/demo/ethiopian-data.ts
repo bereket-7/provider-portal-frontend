@@ -1,5 +1,19 @@
 /** Shared Ethiopian insurers and provider names for demo fixtures */
 
+/** Root-absolute paths — must not be locale-prefixed (see middleware logos exclusion). */
+export const PAYER_LOGO_PATHS: Record<string, string> = {
+	"payer-001": "/logos/nyala.png",
+	"payer-002": "/logos/united.png",
+	"payer-004": "/logos/awash.png",
+	"payer-005": "/logos/oromia.png",
+	"payer-006": "/logos/ethio_life.webp",
+};
+
+export function getPayerLogoUrl(payerId: string, logoUrl?: string): string | undefined {
+	if (logoUrl) return logoUrl;
+	return PAYER_LOGO_PATHS[payerId];
+}
+
 export const ETHIOPIAN_INSURERS = {
 	nyala: {
 		id: "payer-001",
@@ -8,6 +22,7 @@ export const ETHIOPIAN_INSURERS = {
 		email: "claims@nyalainsurance.com.et",
 		phone: "+251 11 552 6262",
 		region: "Addis Ababa",
+		logoUrl: "/logos/nyala.png",
 	},
 	united: {
 		id: "payer-002",
@@ -16,6 +31,7 @@ export const ETHIOPIAN_INSURERS = {
 		email: "info@unitedinsurance.et",
 		phone: "+251 11 515 1060",
 		region: "Addis Ababa",
+		logoUrl: "/logos/united.png",
 	},
 	eic: {
 		id: "payer-003",
@@ -32,6 +48,7 @@ export const ETHIOPIAN_INSURERS = {
 		email: "info@awashinsurance.com",
 		phone: "+251 11 662 9888",
 		region: "Addis Ababa",
+		logoUrl: "/logos/awash.png",
 	},
 	oromia: {
 		id: "payer-005",
@@ -40,6 +57,7 @@ export const ETHIOPIAN_INSURERS = {
 		email: "contact@oromiainsurance.com",
 		phone: "+251 11 439 0000",
 		region: "Addis Ababa",
+		logoUrl: "/logos/oromia.png",
 	},
 	ethioLife: {
 		id: "payer-006",
@@ -48,6 +66,7 @@ export const ETHIOPIAN_INSURERS = {
 		email: "info@ethiolifeinsurance.com",
 		phone: "+251 11 662 1200",
 		region: "Addis Ababa",
+		logoUrl: "/logos/ethio_life.webp",
 	},
 } as const;
 

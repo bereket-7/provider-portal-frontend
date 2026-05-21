@@ -25,6 +25,6 @@ export const config = {
 		// Enable redirects that add missing locales
 		// (e.g. `/pathnames` -> `/en/pathnames`)
 		// Exclude public directory files
-		"/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|docs/.*).*)",
+		"/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|docs/.*|logos/.*|images/.*|avatars/.*).*)",
 	],
 };

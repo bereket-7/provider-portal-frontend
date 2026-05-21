@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumButton } from "@/components/ui/custom/premium-button";
 import { useDemoAgreements, useDemoPayer } from "@/hooks/useDemoEntities";
+import { getPayerLogoUrl } from "@/lib/demo/ethiopian-data";
 
 interface InsuranceDetailViewProps {
 	id: string;
@@ -39,9 +40,12 @@ export function InsuranceDetailView({ id }: InsuranceDetailViewProps) {
 		);
 	}
 
+	const logoUrl = getPayerLogoUrl(payer.id, payer.logoUrl);
+
 	const insurance = {
 		id: payer.id,
 		name: payer.name,
+		logoUrl,
 		type: payer.type,
 		tier: payer.tier,
 		network: payer.network,
@@ -104,8 +108,17 @@ export function InsuranceDetailView({ id }: InsuranceDetailViewProps) {
 
 				<div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/40 pb-5">
 					<div className="flex items-center gap-4">
-						<div className="p-3 bg-primary text-primary-foreground rounded-xl shadow-xl shadow-primary/10 transform -rotate-1 hover:rotate-0 transition-transform duration-500">
-							<Building2 className="w-6 h-6" />
+						<div className="h-14 w-14 flex items-center justify-center bg-white dark:bg-card border border-border/40 rounded-xl shadow-lg p-2 transform -rotate-1 hover:rotate-0 transition-transform duration-500">
+							{logoUrl ? (
+								// eslint-disable-next-line @next/next/no-img-element
+								<img
+									src={logoUrl}
+									alt={`${insurance.name} logo`}
+									className="h-full w-full object-contain"
+								/>
+							) : (
+								<Building2 className="w-6 h-6 text-primary" />
+							)}
 						</div>
 						<div>
 							<div className="flex items-center gap-3">
